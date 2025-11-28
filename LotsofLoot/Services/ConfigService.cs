@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using LotsofLoot.Models.Config;
+using LotsofLoot.Models.Preset;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.Helpers;
 using SPTarkov.Server.Core.Models.Utils;
@@ -11,7 +12,14 @@ namespace LotsofLoot.Services
     public class ConfigService(ModHelper modHelper, JsonUtil jsonUtil, ISptLogger<ConfigService> logger)
     {
         public LotsofLootModMetadata ModMetadata { get; init; } = new();
-        public LotsOfLootConfig LotsOfLootConfig { get; private set; } = new();
+        public LotsofLootConfig LotsofLootConfig { get; private set; } = new();
+
+        /// <summary>
+        /// The current loaded preset
+        /// 
+        /// We set it to default here, as it isn't used until after SPT's database is loaded in which case it shouldn't be null anymore
+        /// </summary>
+        public LotsofLootPresetConfig LotsofLootPresetConfig { get; private set; } = default!;
 
         public string GetModPath()
         {
@@ -20,34 +28,95 @@ namespace LotsofLoot.Services
 
         public string GetConfigPath()
         {
-            return Path.Combine(GetModPath(), "Config", "config.jsonc");
+            return Path.Combine(GetModPath(), "config.json");
+        }
+
+        public string GetPresetPath(string preset)
+        {
+            return Path.Combine(GetModPath(), "Presets", preset);
         }
 
         public async Task LoadAsync()
         {
             string configPath = GetConfigPath();
-            string configDir = Path.GetDirectoryName(configPath)!;
 
-            LotsOfLootConfig? loadedConfig = await jsonUtil.DeserializeFromFileAsync<LotsOfLootConfig>(configPath);
+            LotsofLootConfig? loadedConfig = await jsonUtil.DeserializeFromFileAsync<LotsofLootConfig>(configPath);
 
-            if (loadedConfig is not null)
+            if(loadedConfig is not null)
             {
-                LotsOfLootConfig = loadedConfig;
-
-                logger.Success("[Lots of Loot Redux] Config successfully loaded");
+                LotsofLootConfig = loadedConfig;
             }
             else
             {
-                logger.Warning("[Lots of Loot Redux] No config file found, loading defaults!");
+                logger.Warning("[Lots of Loot Redux] Could not load config! Using default settings");
 
-                if (!Directory.Exists(configDir))
-                {
-                    Directory.CreateDirectory(configDir);
-                }
-
-                // Todo: This is still kind of bad as the comments for configs don't get carried over
-                await File.WriteAllTextAsync(configPath, jsonUtil.Serialize(LotsOfLootConfig, true));
+                // Write the default config file back, for some reason it's missing
+                await WriteConfig();
             }
+
+            LotsofLootPresetConfig? loadedPresetConfig = await LoadPresetConfig(LotsofLootConfig.PresetName);
+
+            if (loadedPresetConfig is not null)
+            {
+                LotsofLootPresetConfig = loadedPresetConfig;
+                logger.Success($"[Lots of Loot Redux] Preset {LotsofLootConfig.PresetName} successfully loaded");
+            }
+            else
+            {
+                if (LotsofLootConfig.PresetName != "default")
+                {
+                    logger.Warning(
+                        $"[Lots of Loot Redux] Preset '{LotsofLootConfig.PresetName}' could not be loaded! Attempting to load default preset"
+                    );
+
+                    loadedPresetConfig = await LoadPresetConfig("default");
+
+                    if (loadedPresetConfig is null)
+                    {
+                        throw new InvalidOperationException(
+                            $"[Lots of Loot Redux] Failed to load preset '{LotsofLootConfig.PresetName}'." +
+                            "Also failed to load the default preset, please re-install this mod as default files don't exist anymore!"
+                        );
+                    }
+
+                    LotsofLootPresetConfig = loadedPresetConfig;
+                    logger.Success("[Lots of Loot Redux] Default preset loaded successfully.");
+
+                    // Set the preset back to default, the user might have removed the other preset
+                    // Or something else occured, anyway this requires user intervention
+                    LotsofLootConfig.PresetName = "default";
+                    await WriteConfig();
+                }
+                else
+                {
+                    throw new InvalidOperationException(
+                        "[Lots of Loot Redux] Failed to load the default preset, please re-install this mod as default files don't exist anymore!"
+                    );
+                }
+            }
+        }
+
+        public async Task<LotsofLootPresetConfig?> LoadPresetConfig(string preset)
+        {
+            return await jsonUtil.DeserializeFromFileAsync<LotsofLootPresetConfig>(GetPresetPath(preset + ".json"));
+        }
+
+        public async Task WriteConfig()
+        {
+            await File.WriteAllTextAsync(GetConfigPath(), jsonUtil.Serialize(LotsofLootConfig, true));
+        }
+
+        public async Task WritePresetConfig(string preset)
+        {
+            var presetPath = GetPresetPath(preset + ".json");
+            var presetDir = Path.GetDirectoryName(presetPath)!;
+
+            if (!Directory.Exists(presetDir))
+            {
+                Directory.CreateDirectory(presetDir);
+            }
+
+            await File.WriteAllTextAsync(GetPresetPath(preset + ".json"), jsonUtil.Serialize(LotsofLootPresetConfig, true));
         }
     }
 }

@@ -56,7 +56,7 @@ namespace LotsofLoot.Utilities
 
         public bool IsDebug()
         {
-            if (ProgramStatics.DEBUG() || configService.LotsOfLootConfig.General.IsDebugEnabled)
+            if (ProgramStatics.DEBUG() || configService.LotsofLootConfig.IsDebugEnabled)
             {
                 return true;
             }

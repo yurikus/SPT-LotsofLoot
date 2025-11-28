@@ -20,7 +20,7 @@ namespace LotsofLoot.Helpers
                     logger.Debug($"Marked room ({locationId}) {spawnpoint.Template.Id}");
                 }
 
-                spawnpoint.Probability *= configService.LotsOfLootConfig.MarkedRoomConfig.Multiplier[locationId.ToLowerInvariant()];
+                spawnpoint.Probability *= configService.LotsofLootPresetConfig.MarkedRoomConfig.Multiplier[locationId.ToLowerInvariant()];
                 AddExtraItemsToMarkedRoom(spawnpoint);
 
                 AdjustMarkedRoomItemGroups(spawnpoint);
@@ -32,7 +32,7 @@ namespace LotsofLoot.Helpers
             var spawnpointTemplateItems = spawnpoint.Template.Items.ToList();
             var spawnpointItemDistribution = spawnpoint.ItemDistribution.ToList();
 
-            foreach ((MongoId templateId, double relativeProbability) in configService.LotsOfLootConfig.MarkedRoomConfig.ExtraItems)
+            foreach ((MongoId templateId, double relativeProbability) in configService.LotsofLootPresetConfig.MarkedRoomConfig.ExtraItems)
             {
                 var existingItem = spawnpoint.Template.Items.FirstOrDefault(item => item.Template == templateId);
 
@@ -85,7 +85,7 @@ namespace LotsofLoot.Helpers
             // Delicious bracket slop, my favorite
             foreach (SptLootItem item in spawnpoint.Template.Items)
             {
-                foreach ((MongoId templateId, double relativeProbability) in configService.LotsOfLootConfig.MarkedRoomConfig.ItemGroups)
+                foreach ((MongoId templateId, double relativeProbability) in configService.LotsofLootPresetConfig.MarkedRoomConfig.ItemGroups)
                 {
                     if (itemHelper.IsOfBaseclass(item.Template, templateId))
                     {

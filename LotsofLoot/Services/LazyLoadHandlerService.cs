@@ -63,7 +63,7 @@ namespace LotsofLoot.Services
                         continue;
                     }
 
-                    if (!configService.LotsOfLootConfig.Containers.TryGetValue(containerId, out float configRelativeProbability))
+                    if (!configService.LotsofLootPresetConfig.Containers.TryGetValue(containerId, out float configRelativeProbability))
                     {
                         continue;
                     }
@@ -119,7 +119,7 @@ namespace LotsofLoot.Services
                 if (key is not null)
                 {
                     if (
-                        configService.LotsOfLootConfig.ChangeRelativeProbabilityInPool.TryGetValue(
+                        configService.LotsofLootPresetConfig.ChangeRelativeProbabilityInPool.TryGetValue(
                             item.Template,
                             out double RelativeProbabilityInPoolModifier
                         ) && distributionLookup.TryGetValue(key, out var itemDistribution)
@@ -140,7 +140,7 @@ namespace LotsofLoot.Services
         {
             foreach (var item in spawnpoint.Template.Items)
             {
-                if (configService.LotsOfLootConfig.ChangeProbabilityOfPool.TryGetValue(item.Template, out double probabilityMultiplier))
+                if (configService.LotsofLootPresetConfig.ChangeProbabilityOfPool.TryGetValue(item.Template, out double probabilityMultiplier))
                 {
                     if (spawnpoint.Probability is null)
                     {

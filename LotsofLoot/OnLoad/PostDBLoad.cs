@@ -36,15 +36,15 @@ namespace LotsofLoot.OnLoad
                 return Task.CompletedTask;
             }
 
-            if (configService.LotsOfLootConfig.General.RemoveBackpackRestrictions)
+            if (configService.LotsofLootPresetConfig.General.RemoveBackpackRestrictions)
             {
                 modificationHelper.RemoveBackpackRestrictions();
             }
 
-            foreach ((string map, double multiplier) in configService.LotsOfLootConfig.LooseLootMultiplier)
+            foreach ((string map, double multiplier) in configService.LotsofLootPresetConfig.LooseLootMultiplier)
             {
                 // When allow loot overlay is disabled, amplify the loose loot ever so slightly so more items spawn in other spawn points.
-                if (!configService.LotsOfLootConfig.General.AllowLootOverlay)
+                if (!configService.LotsofLootPresetConfig.General.AllowLootOverlay)
                 {
                     _locationConfig.LooseLootMultiplier[map] = Math.Round(multiplier * 1.5);
                 }
@@ -53,19 +53,19 @@ namespace LotsofLoot.OnLoad
                     _locationConfig.LooseLootMultiplier[map] = multiplier;
                 }
 
-                _locationConfig.StaticLootMultiplier[map] = configService.LotsOfLootConfig.StaticLootMultiplier[map];
-                _locationConfig.ContainerRandomisationSettings.Enabled = configService.LotsOfLootConfig.General.LootContainersRandom;
+                _locationConfig.StaticLootMultiplier[map] = configService.LotsofLootPresetConfig.StaticLootMultiplier[map];
+                _locationConfig.ContainerRandomisationSettings.Enabled = configService.LotsofLootPresetConfig.General.LootContainersRandom;
 
                 if (logger.IsDebug())
                 {
                     logger.Debug($"Loose loot multiplier {map}: {_locationConfig.LooseLootMultiplier[map]}");
-                    logger.Debug($"Static loot multiplier {map}: {configService.LotsOfLootConfig.StaticLootMultiplier[map]}");
+                    logger.Debug($"Static loot multiplier {map}: {configService.LotsofLootPresetConfig.StaticLootMultiplier[map]}");
                 }
             }
 
             lazyLoadHandlerService.OnPostDBLoad();
 
-            if (configService.LotsOfLootConfig.General.DisableFleaRestrictions)
+            if (configService.LotsofLootPresetConfig.General.DisableFleaRestrictions)
             {
                 foreach ((_, TemplateItem template) in databaseTemplates.Items)
                 {
@@ -77,7 +77,7 @@ namespace LotsofLoot.OnLoad
                 }
             }
 
-            foreach ((MongoId itemId, long adjustedPrice) in configService.LotsOfLootConfig.General.PriceCorrection)
+            foreach ((MongoId itemId, long adjustedPrice) in configService.LotsofLootPresetConfig.General.PriceCorrection)
             {
                 databaseTemplates.Prices[itemId] = adjustedPrice;
             }

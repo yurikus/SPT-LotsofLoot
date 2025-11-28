@@ -1,5 +1,5 @@
 ﻿using LotsofLoot.Helpers;
-using LotsofLoot.Models.Config;
+using LotsofLoot.Models.Preset;
 using LotsofLoot.Services;
 using LotsofLoot.Utilities;
 using SPTarkov.DI.Annotations;
@@ -84,7 +84,7 @@ namespace LotsofLoot.Generators
 
             var desiredSpawnPointCount = 0;
 
-            if(config.LotsOfLootConfig.General.ReduceLowLooseLootRolls)
+            if(config.LotsofLootPresetConfig.General.ReduceLowLooseLootRolls)
             {
                 var mean = dynamicLootDist.SpawnpointCount.Mean;
 
@@ -114,7 +114,7 @@ namespace LotsofLoot.Generators
             );
             }
 
-            int lotsofLootDesiredSpawnPointCount = config.LotsOfLootConfig.Limits[locationName];
+            int lotsofLootDesiredSpawnPointCount = config.LotsofLootPresetConfig.Limits[locationName];
 
             if (desiredSpawnPointCount > lotsofLootDesiredSpawnPointCount)
             {
@@ -185,7 +185,7 @@ namespace LotsofLoot.Generators
             if (randomSpawnPointCount > 0 && spawnPointArray.Count > 0)
             // Add randomly chosen spawn points
             {
-                if (!config.LotsOfLootConfig.General.AllowLootOverlay)
+                if (!config.LotsofLootPresetConfig.General.AllowLootOverlay)
                 {
                     foreach (var si in spawnPointArray.DrawAndRemove((int)randomSpawnPointCount))
                     {
@@ -386,11 +386,11 @@ namespace LotsofLoot.Generators
             }
             else if (itemHelper.IsOfBaseclass(chosenTpl, BaseClasses.SIMPLE_CONTAINER) && chosenTpl != "5c093e3486f77430cb02e593")
             {
-                HandleContainerOrBackpackItem(items, staticAmmoDist, config.LotsOfLootConfig.LootinLooseContainer.LootInContainerModifier);
+                HandleContainerOrBackpackItem(items, staticAmmoDist, config.LotsofLootPresetConfig.LootinLooseContainer.LootInContainerModifier);
             }
             else if (itemHelper.IsOfBaseclass(chosenTpl, BaseClasses.BACKPACK))
             {
-                HandleContainerOrBackpackItem(items, staticAmmoDist, config.LotsOfLootConfig.LootinLooseContainer.LootInBackpackModifier);
+                HandleContainerOrBackpackItem(items, staticAmmoDist, config.LotsofLootPresetConfig.LootinLooseContainer.LootInBackpackModifier);
             }
             else if (itemHelper.ArmorItemCanHoldMods(chosenTpl))
             {
@@ -573,7 +573,7 @@ namespace LotsofLoot.Generators
                 blacklist.UnionWith(expandedBlacklist);
 
                 // Add config blacklist
-                if (config.LotsOfLootConfig.LootinLooseContainer.Blacklist.TryGetValue(tpl, out var configBlacklist))
+                if (config.LotsofLootPresetConfig.LootinLooseContainer.Blacklist.TryGetValue(tpl, out var configBlacklist))
                 {
                     blacklist.UnionWith(configBlacklist);
                 }
@@ -631,7 +631,7 @@ namespace LotsofLoot.Generators
 
             // Generate loot items
             List<Item> generatedItems = [];
-            LootInLooseContainerSpawnLimit? limits = config.LotsOfLootConfig.LootinLooseContainer.SpawnLimits.TryGetValue(
+            LootInLooseContainerSpawnLimit? limits = config.LotsofLootPresetConfig.LootinLooseContainer.SpawnLimits.TryGetValue(
                 tpl,
                 out LootInLooseContainerSpawnLimit? lim
             )
@@ -651,7 +651,7 @@ namespace LotsofLoot.Generators
                 }
 
                 // Handle if we should draw an item from the ProbabilityObjectArray (Weighted) or from the whitelist
-                string drawnItemTpl = config.LotsOfLootConfig.General.ItemWeights
+                string drawnItemTpl = config.LotsofLootPresetConfig.General.ItemWeights
                     ? itemArray.DrawAndRemove(1).FirstOrDefault()
                     : whitelist[randomUtil.GetInt(0, whitelist.Count - 1)];
 
@@ -666,7 +666,7 @@ namespace LotsofLoot.Generators
                         }
                         else
                         {
-                            if (config.LotsOfLootConfig.General.ItemWeights)
+                            if (config.LotsofLootPresetConfig.General.ItemWeights)
                             {
                                 itemArray = itemArray.Filter(i => !itemHelper.IsOfBaseclass(i.Key, BaseClasses.KEY_MECHANICAL));
                             }
@@ -685,7 +685,7 @@ namespace LotsofLoot.Generators
                         }
                         else
                         {
-                            if (config.LotsOfLootConfig.General.ItemWeights)
+                            if (config.LotsofLootPresetConfig.General.ItemWeights)
                             {
                                 itemArray = itemArray.Filter(i => !itemHelper.IsOfBaseclass(i.Key, BaseClasses.KEYCARD));
                             }
