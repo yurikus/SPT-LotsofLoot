@@ -11,8 +11,12 @@ namespace LotsofLoot.Services
     [Injectable(InjectionType.Singleton)]
     public class ConfigService(ModHelper modHelper, JsonUtil jsonUtil, ISptLogger<ConfigService> logger)
     {
+        public string ModPath { get; init; } = modHelper.GetAbsolutePathToModFolder(Assembly.GetExecutingAssembly());
+
         public LotsofLootModMetadata ModMetadata { get; init; } = new();
         public LotsofLootConfig LotsofLootConfig { get; private set; } = new();
+
+        public string CurrentlyLoadedPreset { get; private set; } = string.Empty;
 
         /// <summary>
         /// The current loaded preset
@@ -21,19 +25,26 @@ namespace LotsofLoot.Services
         /// </summary>
         public LotsofLootPresetConfig LotsofLootPresetConfig { get; private set; } = default!;
 
-        public string GetModPath()
-        {
-            return modHelper.GetAbsolutePathToModFolder(Assembly.GetExecutingAssembly());
-        }
-
         public string GetConfigPath()
         {
-            return Path.Combine(GetModPath(), "config.json");
+            return Path.Combine(ModPath, "config.json");
         }
 
         public string GetPresetPath(string preset)
         {
-            return Path.Combine(GetModPath(), "Presets", preset);
+            return Path.Combine(ModPath, "Presets", preset);
+        }
+
+        public List<string> GetPresets()
+        {
+            var presetPath = Path.Combine(ModPath, "Presets");
+
+            if (!Directory.Exists(presetPath))
+            {
+                return [];
+            }
+
+            return Directory.GetFiles(presetPath, "*.json").Select(Path.GetFileNameWithoutExtension).OfType<string>().ToList();
         }
 
         public async Task LoadAsync()
@@ -75,7 +86,7 @@ namespace LotsofLoot.Services
                     {
                         throw new InvalidOperationException(
                             $"[Lots of Loot Redux] Failed to load preset '{LotsofLootConfig.PresetName}'." +
-                            "Also failed to load the default preset, please re-install this mod as default files don't exist anymore!"
+                            "Also failed to load the default preset, please re-install this mod as the default preset does not exist anymore!"
                         );
                     }
 
@@ -90,7 +101,7 @@ namespace LotsofLoot.Services
                 else
                 {
                     throw new InvalidOperationException(
-                        "[Lots of Loot Redux] Failed to load the default preset, please re-install this mod as default files don't exist anymore!"
+                        "[Lots of Loot Redux] Failed to load the default preset, please re-install this mod as the default preset does not exist anymore!"
                     );
                 }
             }
@@ -98,7 +109,18 @@ namespace LotsofLoot.Services
 
         public async Task<LotsofLootPresetConfig?> LoadPresetConfig(string preset)
         {
-            return await jsonUtil.DeserializeFromFileAsync<LotsofLootPresetConfig>(GetPresetPath(preset + ".json"));
+            try
+            {
+                var loadedPreset = await jsonUtil.DeserializeFromFileAsync<LotsofLootPresetConfig>(GetPresetPath(preset + ".json"));
+                CurrentlyLoadedPreset = preset;
+
+                return loadedPreset;
+            }
+            catch(Exception ex)
+            {
+                logger.Error($"Failed to load preset '{preset}'", ex);
+                return null;
+            }
         }
 
         public async Task WriteConfig()

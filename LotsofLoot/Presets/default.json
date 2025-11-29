@@ -14,19 +14,19 @@
     "ReduceLowLooseLootRolls": false
   },
   "LooseLootMultiplier": {
-    "bigmap": 5,
-    "factory4_day": 5,
-    "factory4_night": 5,
-    "woods": 5,
-    "interchange": 5,
-    "laboratory": 5,
-    "rezervbase": 5,
-    "shoreline": 5,
-    "tarkovstreets": 5,
-    "lighthouse": 5,
-    "sandbox": 5,
-    "sandbox_high": 5,
-    "labyrinth": 5
+    "bigmap": 7.5,
+    "factory4_day": 7.5,
+    "factory4_night": 7.5,
+    "woods": 7.5,
+    "interchange": 7.5,
+    "laboratory": 7.5,
+    "rezervbase": 7.5,
+    "shoreline": 7.5,
+    "tarkovstreets": 7.5,
+    "lighthouse": 7.5,
+    "sandbox": 7.5,
+    "sandbox_high": 7.5,
+    "labyrinth": 7.5
   },
   "StaticLootMultiplier": {
     "bigmap": 2,
