@@ -72,6 +72,7 @@ namespace LotsofLoot.Models.Config
             };
 
         public MarkedRoomConfig MarkedRoomConfig { get; set; } = new();
+        public RefRoomConfig RefRoomConfig { get; set; } = new();
         public LootInLooseContainerConfig LootinLooseContainer { get; set; } = new();
 
         /// <summary>
