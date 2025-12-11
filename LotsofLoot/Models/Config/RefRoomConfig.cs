@@ -14,7 +14,7 @@ namespace LotsofLoot.Models.Config
                 { "woods", 1 },
                 // Grumpy
                 { "interchange", 1 },
-                // Shoreline
+                // Voron
                 { "shoreline", 1 },
                 // Leon
                 { "lighthouse", 1 },
