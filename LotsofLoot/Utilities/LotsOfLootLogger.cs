@@ -1,13 +1,12 @@
 ﻿using LotsofLoot.Services;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.Models.Utils;
-using SPTarkov.Server.Core.Services;
 using SPTarkov.Server.Core.Utils;
 
 namespace LotsofLoot.Utilities
 {
     [Injectable]
-    public class LotsOfLootLogger(ISptLogger<LotsOfLootLogger> logger, DatabaseService databaseService, ConfigService configService)
+    public class LotsOfLootLogger(ISptLogger<LotsOfLootLogger> logger)
     {
         public void Success(string data, Exception? ex = null)
         {
@@ -39,24 +38,9 @@ namespace LotsofLoot.Utilities
             logger.Critical($"[Lots of Loot Redux] {data}", ex);
         }
 
-        public string WriteItemName(string itemId, bool writeTpl = false)
-        {
-            var enLocale = databaseService.GetLocales().Global["en"];
-            string itemName = enLocale?.Value?[$"{itemId} Name"] ?? "Unknown";
-
-            if (writeTpl)
-            {
-                return $"{itemName}({itemId})";
-            }
-            else
-            {
-                return itemName;
-            }
-        }
-
         public bool IsDebug()
         {
-            if (ProgramStatics.DEBUG() || configService.LotsofLootConfig.IsDebugEnabled)
+            if (ProgramStatics.DEBUG() || ConfigService.LotsofLootConfig.IsDebugEnabled)
             {
                 return true;
             }

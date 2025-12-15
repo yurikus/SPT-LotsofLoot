@@ -11,7 +11,8 @@
       "64d4b23dc1b37504b41ac2b6": 1000000
     },
     "LootContainersRandom": true,
-    "ReduceLowLooseLootRolls": false
+    "ReduceLowLooseLootRolls": false,
+    "ReduceLowLooseLootRollsAmount":  0.45
   },
   "LooseLootMultiplier": {
     "bigmap": 7.5,
@@ -45,18 +46,18 @@
   },
   "Limits": {
     "bigmap": 10000,
-    "factory4_day": 1500,
-    "factory4_night": 1500,
+    "factory4_day": 2000,
+    "factory4_night": 2000,
     "woods": 10000,
     "interchange": 30000,
-    "laboratory": 25000,
-    "rezervbase": 40000,
+    "laboratory": 10000,
+    "rezervbase": 30000,
     "shoreline": 20000,
-    "tarkovstreets": 50000,
+    "tarkovstreets": 30000,
     "lighthouse": 20000,
-    "sandbox": 15000,
-    "sandbox_high": 15000,
-    "labyrinth": 2500
+    "sandbox": 10000,
+    "sandbox_high": 10000,
+    "labyrinth": 3000
   },
   "MarkedRoomConfig": {
     "Multiplier": {

@@ -32,7 +32,7 @@ namespace LotsofLoot.Models.Preset
         /// <summary>
         /// Some items don't have good or accurate data set for their price points, this changes the pricing on these items to be more realistic
         /// </summary>
-        public required Dictionary<MongoId, long> PriceCorrection { get; set; }
+        public required Dictionary<MongoId, double> PriceCorrection { get; set; }
 
         /// <summary>
         /// Allows for setting if containers will spawn randomly, false will disable randomness.
@@ -43,5 +43,12 @@ namespace LotsofLoot.Models.Preset
         /// Raises the lower end of SPT's loose loot rolls for more consistent loose loot spawns
         /// </summary>
         public required bool ReduceLowLooseLootRolls { get; set; }
+
+        /// <summary>
+        /// Controls how strongly low loose-loot rolls are adjusted upward.
+        /// Lower values smooth out low rolls (less randomness), while higher values
+        /// allow low rolls to stay low (more randomness).
+        /// </summary>
+        public required double ReduceLowLooseLootRollsAmount { get; set; }
     }
 }

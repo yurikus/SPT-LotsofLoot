@@ -9,12 +9,12 @@ using SPTarkov.Server.Core.Utils;
 namespace LotsofLoot.Services
 {
     [Injectable(InjectionType.Singleton)]
-    public class ConfigService(ModHelper modHelper, JsonUtil jsonUtil, ISptLogger<ConfigService> logger)
+    public class ConfigService(ModHelper modHelper, JsonUtil jsonUtil, IEnumerable<IOnPresetUpdate> onPresetUpdates, ISptLogger<ConfigService> logger)
     {
         public string ModPath { get; init; } = modHelper.GetAbsolutePathToModFolder(Assembly.GetExecutingAssembly());
 
+        public static LotsofLootConfig LotsofLootConfig { get; private set; } = new();
         public LotsofLootModMetadata ModMetadata { get; init; } = new();
-        public LotsofLootConfig LotsofLootConfig { get; private set; } = new();
 
         public string CurrentlyLoadedPreset { get; private set; } = string.Empty;
 
@@ -24,6 +24,8 @@ namespace LotsofLoot.Services
         /// We set it to default here, as it isn't used until after SPT's database is loaded in which case it shouldn't be null anymore
         /// </summary>
         public LotsofLootPresetConfig LotsofLootPresetConfig { get; private set; } = default!;
+
+        public EditablePresetHolder EditablePresetHolder { get; private set; } = default!;
 
         public string GetConfigPath()
         {
@@ -47,13 +49,17 @@ namespace LotsofLoot.Services
             return Directory.GetFiles(presetPath, "*.json").Select(Path.GetFileNameWithoutExtension).OfType<string>().ToList();
         }
 
+        /// <summary>
+        ///  LoadAsync handles the initial loading of Lots of Loot, this method should not be used after the initial load
+        /// </summary>
+        /// <exception cref="InvalidOperationException">This exception is thrown if there is no possible way to recover, this will kill the SPT Server</exception>
         public async Task LoadAsync()
         {
             string configPath = GetConfigPath();
 
             LotsofLootConfig? loadedConfig = await jsonUtil.DeserializeFromFileAsync<LotsofLootConfig>(configPath);
 
-            if(loadedConfig is not null)
+            if (loadedConfig is not null)
             {
                 LotsofLootConfig = loadedConfig;
             }
@@ -65,14 +71,10 @@ namespace LotsofLoot.Services
                 await WriteConfig();
             }
 
-            LotsofLootPresetConfig? loadedPresetConfig = await LoadPresetConfig(LotsofLootConfig.PresetName);
+            // We are too early to update the preset here, and since this is the initial init we dont need to save the config again
+            bool couldLoadPresetConfig = await LoadPresetConfig(LotsofLootConfig.PresetName, false, false);
 
-            if (loadedPresetConfig is not null)
-            {
-                LotsofLootPresetConfig = loadedPresetConfig;
-                logger.Success($"[Lots of Loot Redux] Preset {LotsofLootConfig.PresetName} successfully loaded");
-            }
-            else
+            if (!couldLoadPresetConfig)
             {
                 if (LotsofLootConfig.PresetName != "default")
                 {
@@ -80,23 +82,17 @@ namespace LotsofLoot.Services
                         $"[Lots of Loot Redux] Preset '{LotsofLootConfig.PresetName}' could not be loaded! Attempting to load default preset"
                     );
 
-                    loadedPresetConfig = await LoadPresetConfig("default");
+                    // This will set the preset back to default if it loads successfully
+                    // This might have happened because the user removed a preset they were using
+                    couldLoadPresetConfig = await LoadPresetConfig("default", false, true);
 
-                    if (loadedPresetConfig is null)
+                    if (!couldLoadPresetConfig)
                     {
                         throw new InvalidOperationException(
                             $"[Lots of Loot Redux] Failed to load preset '{LotsofLootConfig.PresetName}'." +
                             "Also failed to load the default preset, please re-install this mod as the default preset does not exist anymore!"
                         );
                     }
-
-                    LotsofLootPresetConfig = loadedPresetConfig;
-                    logger.Success("[Lots of Loot Redux] Default preset loaded successfully.");
-
-                    // Set the preset back to default, the user might have removed the other preset
-                    // Or something else occured, anyway this requires user intervention
-                    LotsofLootConfig.PresetName = "default";
-                    await WriteConfig();
                 }
                 else
                 {
@@ -107,25 +103,81 @@ namespace LotsofLoot.Services
             }
         }
 
-        public async Task<LotsofLootPresetConfig?> LoadPresetConfig(string preset)
+        /// <summary>
+        /// The main preset load method
+        /// </summary>
+        /// <param name="preset">Which preset to load</param>
+        /// <param name="shouldPresetUpdate">If preset updates should be passed (Essentially meaning if the mod should be reloaded or not)</param>
+        /// <returns>Returns true if loaded successfully, returns false if not</returns>
+        public async Task<bool> LoadPresetConfig(string preset, bool shouldPresetUpdate, bool shouldWritePresetNameToConfig)
         {
             try
             {
-                var loadedPreset = await jsonUtil.DeserializeFromFileAsync<LotsofLootPresetConfig>(GetPresetPath(preset + ".json"));
-                CurrentlyLoadedPreset = preset;
+                LotsofLootPresetConfig? loadedPreset = await jsonUtil.DeserializeFromFileAsync<LotsofLootPresetConfig>(GetPresetPath(preset + ".json"));
 
-                return loadedPreset;
+                if (loadedPreset is null)
+                {
+                    return false;
+                }
+
+                CurrentlyLoadedPreset = preset;
+                LotsofLootPresetConfig = loadedPreset;
+                EditablePresetHolder = new EditablePresetHolder(LotsofLootPresetConfig);
+
+                if (shouldPresetUpdate)
+                {
+                    foreach (IOnPresetUpdate presetUpdate in onPresetUpdates)
+                    {
+                        presetUpdate.Revert();
+                        presetUpdate.Apply(LotsofLootPresetConfig);
+                    }
+                }
+
+                logger.Success($"[Lots of Loot Redux] Preset '{preset}' successfully loaded");
+
+                if (shouldWritePresetNameToConfig)
+                {
+                    LotsofLootConfig.PresetName = preset;
+                    await WriteConfig();
+                }
+
+                return true;
             }
             catch(Exception ex)
             {
-                logger.Error($"Failed to load preset '{preset}'", ex);
-                return null;
+                logger.Error($"[Lots of Loot Redux] Failed to load preset '{preset}'", ex);
+                return false;
             }
         }
 
         public async Task WriteConfig()
         {
             await File.WriteAllTextAsync(GetConfigPath(), jsonUtil.Serialize(LotsofLootConfig, true));
+        }
+
+        public async Task ReloadConfig()
+        {
+            EditablePresetHolder = new EditablePresetHolder(LotsofLootPresetConfig);
+        }
+
+        public async Task SavePendingChanges()
+        {
+            if (EditablePresetHolder.PendingChanges.Count <= 0)
+            {
+                return;
+            }
+
+            LotsofLootPresetConfig = EditablePresetHolder.presetConfig;
+
+            await WritePresetConfig(CurrentlyLoadedPreset);
+
+            foreach(IOnPresetUpdate presetUpdate in onPresetUpdates)
+            {
+                presetUpdate.Revert();
+                presetUpdate.Apply(LotsofLootPresetConfig);
+            }
+
+            EditablePresetHolder = new EditablePresetHolder(LotsofLootPresetConfig);
         }
 
         public async Task WritePresetConfig(string preset)
@@ -138,7 +190,7 @@ namespace LotsofLoot.Services
                 Directory.CreateDirectory(presetDir);
             }
 
-            await File.WriteAllTextAsync(GetPresetPath(preset + ".json"), jsonUtil.Serialize(LotsofLootPresetConfig, true));
+            await File.WriteAllTextAsync(presetPath, jsonUtil.Serialize(LotsofLootPresetConfig, true));
         }
     }
 }

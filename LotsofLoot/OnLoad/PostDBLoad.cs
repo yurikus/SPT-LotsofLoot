@@ -1,4 +1,6 @@
-﻿using LotsofLoot.Helpers;
+﻿using System.Diagnostics;
+using LotsofLoot.Helpers;
+using LotsofLoot.Models.Preset;
 using LotsofLoot.Services;
 using LotsofLoot.Utilities;
 using SPTarkov.DI.Annotations;
@@ -9,13 +11,17 @@ using SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using SPTarkov.Server.Core.Models.Spt.Config;
 using SPTarkov.Server.Core.Models.Spt.Templates;
 using SPTarkov.Server.Core.Servers;
+using SPTarkov.Server.Core.Services;
 
 namespace LotsofLoot.OnLoad
 {
     [Injectable(TypePriority = OnLoadOrder.PostDBModLoader + LotsofLootLoadPriority.LotsofLootPriorityOffset)]
     public class PostDBLoad(
-        LoadPresetService loadPresetService,
+        ConfigService configService,
         DatabaseServer databaseServer,
+        LocaleCacheService localeCacheService,
+        LazyLoadHandlerService lazyLoadHandlerService,
+        IEnumerable<IOnPresetUpdate> onPresetUpdates,
         LotsOfLootLogger logger
     ) : IOnLoad
     {
@@ -30,7 +36,18 @@ namespace LotsofLoot.OnLoad
                 return Task.CompletedTask;
             }
 
-            return loadPresetService.OnLoad();
+            localeCacheService.HydrateCache();
+
+            // This only needs initialisation once, it will get the current values out of the config service when a raid is loaded
+            lazyLoadHandlerService.OnPostDBLoad();
+
+            // Apply the currently loaded preset
+            foreach(IOnPresetUpdate presetUpdate in onPresetUpdates)
+            {
+                presetUpdate.Apply(configService.LotsofLootPresetConfig);
+            }
+
+            return Task.CompletedTask;
         }
     }
 }
