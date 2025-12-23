@@ -187,7 +187,7 @@ namespace LotsofLoot.Generators
             {
                 if (!config.LotsofLootPresetConfig.General.AllowLootOverlay)
                 {
-                    foreach (var si in spawnPointArray.DrawAndRemove((int)randomSpawnPointCount))
+                    foreach (var si in spawnPointArray.DrawAndRemove(randomSpawnPointCount))
                     {
                         chosenSpawnPoints.Add(spawnPointArray.Data(si));
                     }
@@ -195,15 +195,20 @@ namespace LotsofLoot.Generators
                 else
                 {
                     // Draw without removing if we allow loot overlay
-                    foreach (var si in spawnPointArray.Draw((int)randomSpawnPointCount))
+                    // We also have to clone here to make sure we aren't using an original
+                    // spawnpoint's templates because those will get emptied after being used
+                    foreach (var si in spawnPointArray.Draw(randomSpawnPointCount))
                     {
-                        chosenSpawnPoints.Add(spawnPointArray.Data(si));
+                        chosenSpawnPoints.Add(cloner.Clone(spawnPointArray.Data(si)));
                     }
                 }
             }
 
-            // Filter out duplicate locationIds // prob can be done better
-            chosenSpawnPoints = chosenSpawnPoints.GroupBy(spawnPoint => spawnPoint.LocationId).Select(group => group.First()).ToList();
+            if (!config.LotsofLootPresetConfig.General.AllowLootOverlay)
+            {
+                // Filter out duplicate locationIds // prob can be done better
+                chosenSpawnPoints = chosenSpawnPoints.GroupBy(spawnPoint => spawnPoint.LocationId).Select(group => group.First()).ToList();
+            }
 
             // Do we have enough items in pool to fulfill requirement
             var tooManySpawnPointsRequested = desiredSpawnPointCount - chosenSpawnPoints.Count > 0;
