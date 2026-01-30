@@ -110,7 +110,7 @@ namespace LotsofLoot.Services
         private void ChangeRelativeProbabilityInPool(string locationId, Spawnpoint spawnpoint)
         {
             Dictionary<string, LooseLootItemDistribution> distributionLookup = spawnpoint.ItemDistribution.ToDictionary(d =>
-                d.ComposedKey.Key
+                d.ComposedKey.Key!
             );
 
             foreach (var item in spawnpoint.Template.Items)
