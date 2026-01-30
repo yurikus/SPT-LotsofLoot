@@ -60,5 +60,50 @@ namespace LotsofLoot
 
             return false;
         }
+
+        public static bool IsRefKeySpawnpoint(this Spawnpoint spawnpoint, string locationId)
+        {
+            var pos = spawnpoint.Template?.Position;
+
+            if (pos is null)
+            {
+                return false;
+            }
+
+            if (locationId == "woods")
+            {
+                //shatun
+                if (pos.X > -514.5 && pos.X < -510.5 && pos.Z > -395.5 && pos.Z < -388 && pos.Y > 15.5 && pos.Y < 19)
+                {
+                    return true;
+                }
+            }
+            else if (locationId == "interchange")
+            {
+                //grumpy
+                if (pos.X > -200.5 && pos.X < -193 && pos.Z > -348 && pos.Z < -344 && pos.Y > 21 && pos.Y < 24)
+                {
+                    return true;
+                }
+            }
+            else if (locationId == "shoreline")
+            {
+                //voron
+                if (pos.X > -239.5 && pos.X < -235.5 && pos.Z > 191.5 && pos.Z < 199 && pos.Y > -41 && pos.Y < -37)
+                {
+                    return true;
+                }
+            }
+            else if (locationId == "lighthouse")
+            {
+                //leon
+                if (pos.X > -79.5 && pos.X < -75.5 && pos.Z > -297.5 && pos.Z < -288 && pos.Y > 9 && pos.Y < 12)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
 }
