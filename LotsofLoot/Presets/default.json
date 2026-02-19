@@ -61,10 +61,10 @@
   },
   "MarkedRoomConfig": {
     "Multiplier": {
-      "bigmap": 1,
-      "rezervbase": 1,
-      "tarkovstreets": 1,
-      "lighthouse": 1
+      "bigmap": 4,
+      "rezervbase": 4,
+      "tarkovstreets": 4,
+      "lighthouse": 4
     },
     "ExtraItems": {
       "619cbf9e0a7c3a1a2731940a": 1,
