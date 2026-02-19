@@ -19,7 +19,7 @@ namespace LotsofLoot.OnPresetUpdate
             
                 foreach ((_, TemplateItem template) in databaseTemplates.Items)
                 {
-                    if (itemHelper.IsValidItem(template.Id))
+                    if (itemHelper.IsValidItem(template.Id) && template.Properties is not null)
                     {
                         template.Properties.CanRequireOnRagfair = true;
                         template.Properties.CanSellOnRagfair = true;
