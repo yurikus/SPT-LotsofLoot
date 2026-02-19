@@ -24,7 +24,12 @@ public class ArmorItemModsGenerator(ConfigServer configServer, ItemHelper itemHe
         return false;
     }
 
-    public void CreateItem(List<Item> items, TemplateItem templateItem, Dictionary<string, IEnumerable<StaticAmmoDetails>> staticAmmoDictionary, LotsofLootLocationLootGenerator context)
+    public void CreateItem(
+        List<Item> items,
+        TemplateItem templateItem,
+        Dictionary<string, IEnumerable<StaticAmmoDetails>> staticAmmoDictionary,
+        LotsofLootLocationLootGenerator context
+    )
     {
         Preset? defaultPreset = presetHelper.GetDefaultPreset(templateItem.Id);
 
@@ -37,11 +42,7 @@ public class ArmorItemModsGenerator(ConfigServer configServer, ItemHelper itemHe
         }
         else if (templateItem.Properties.Slots?.Count() > 0)
         {
-            items = itemHelper.AddChildSlotItems(
-                items,
-                templateItem,
-                _locationConfig.EquipmentLootSettings.ModSpawnChancePercent
-            );
+            items = itemHelper.AddChildSlotItems(items, templateItem, _locationConfig.EquipmentLootSettings.ModSpawnChancePercent);
         }
     }
 }

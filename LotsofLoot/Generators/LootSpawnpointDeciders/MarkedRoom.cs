@@ -8,9 +8,15 @@ using SPTarkov.Server.Core.Utils.Collections;
 namespace LotsofLoot.Generators.LootSpawnpointDeciders;
 
 [Injectable]
-public sealed class MarkedRoom(ConfigService config, ICloner cloner, NewSPTRandomUtil randomUtil, ILogger<MarkedRoom> logger) : ILootSpawnpointDecider
+public sealed class MarkedRoom(ConfigService config, ICloner cloner, NewSPTRandomUtil randomUtil, ILogger<MarkedRoom> logger)
+    : ILootSpawnpointDecider
 {
-    public List<Spawnpoint> Decide(string locationName, int desiredSpawnPointCount, ProbabilityObjectArray<string, Spawnpoint> spawnPointArray, List<Spawnpoint> guaranteedLoosePoints)
+    public List<Spawnpoint> Decide(
+        string locationName,
+        int desiredSpawnPointCount,
+        ProbabilityObjectArray<string, Spawnpoint> spawnPointArray,
+        List<Spawnpoint> guaranteedLoosePoints
+    )
     {
         if (!config.LotsofLootPresetConfig.MarkedRoomConfig.Multiplier.ContainsKey(locationName.ToLowerInvariant()))
         {
@@ -50,10 +56,8 @@ public sealed class MarkedRoom(ConfigService config, ICloner cloner, NewSPTRando
         var std = Math.Sqrt(variance);
         var meanScale = Math.Sqrt(Math.Max(0.0, markedRoomMultiplier));
         var stdScale = Math.Sqrt(meanScale);
-        var markedRoomDesiredCount = (int) Math.Round(Math.Max(0.0,
-            randomUtil.GetNormallyDistributedRandomNumber(
-                expectedCount * meanScale,
-                std * stdScale)));
+        var markedRoomDesiredCount = (int)
+            Math.Round(Math.Max(0.0, randomUtil.GetNormallyDistributedRandomNumber(expectedCount * meanScale, std * stdScale)));
 
         var markedRoomRandomCount = markedRoomDesiredCount - guaranteedMarkedRoomPoints.Count;
         if (markedRoomDesiredCount > 0 && markedRoomArray.Count > 0)

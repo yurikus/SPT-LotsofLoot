@@ -130,7 +130,7 @@ public sealed class LocaleCacheService(LocaleService localeService, DatabaseServ
         { BaseClasses.TOOL, "Tool group" },
         { BaseClasses.VEST, "Vest group" },
         { BaseClasses.VISORS, "Visors group" },
-        { BaseClasses.WEAPON, "Weapon group" }
+        { BaseClasses.WEAPON, "Weapon group" },
     };
 
     public void HydrateCache()

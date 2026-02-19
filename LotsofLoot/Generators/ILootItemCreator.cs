@@ -7,5 +7,10 @@ namespace LotsofLoot.Generators;
 public interface ILootItemCreator
 {
     public bool CanCreateItem(MongoId tpl);
-    public void CreateItem(List<Item> items, TemplateItem templateItem, Dictionary<string, IEnumerable<StaticAmmoDetails>> staticAmmoDictionary, LotsofLootLocationLootGenerator context);
+    public void CreateItem(
+        List<Item> items,
+        TemplateItem templateItem,
+        Dictionary<string, IEnumerable<StaticAmmoDetails>> staticAmmoDictionary,
+        LotsofLootLocationLootGenerator context
+    );
 }

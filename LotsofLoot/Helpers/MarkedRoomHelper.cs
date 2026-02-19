@@ -4,105 +4,112 @@ using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.Helpers;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common;
-using SPTarkov.Server.Core.Utils;
 
-namespace LotsofLoot.Helpers
+namespace LotsofLoot.Helpers;
+
+[Injectable]
+public class MarkedRoomHelper(ConfigService configService, ItemHelper itemHelper, LotsOfLootLogger logger)
 {
-    [Injectable]
-    public class MarkedRoomHelper(ConfigService configService, ItemHelper itemHelper, LotsOfLootLogger logger)
+    public void AdjustMarkedRooms(string locationId, Spawnpoint spawnpoint)
     {
-        public void AdjustMarkedRooms(string locationId, Spawnpoint spawnpoint)
+        if (spawnpoint.IsMarkedRoomSpawnpoint(locationId.ToLowerInvariant()))
         {
-            if (spawnpoint.IsMarkedRoomSpawnpoint(locationId.ToLowerInvariant()))
+            if (logger.IsDebug())
             {
-                if (logger.IsDebug())
-                {
-                    logger.Debug($"Marked room ({locationId}) {spawnpoint.Template.Id}");
-                }
-
-                AddExtraItemsToMarkedRoom(spawnpoint);
-
-                AdjustMarkedRoomItemGroups(spawnpoint);
+                logger.Debug($"Marked room ({locationId}) {spawnpoint.Template.Id}");
             }
+
+            AddExtraItemsToMarkedRoom(spawnpoint);
+
+            AdjustMarkedRoomItemGroups(spawnpoint);
         }
+    }
 
-        private void AddExtraItemsToMarkedRoom(Spawnpoint spawnpoint)
+    private void AddExtraItemsToMarkedRoom(Spawnpoint spawnpoint)
+    {
+        var spawnpointTemplateItems = spawnpoint.Template.Items.ToList();
+        var spawnpointItemDistribution = spawnpoint.ItemDistribution.ToList();
+
+        foreach ((MongoId templateId, double relativeProbability) in configService.LotsofLootPresetConfig.MarkedRoomConfig.ExtraItems)
         {
-            var spawnpointTemplateItems = spawnpoint.Template.Items.ToList();
-            var spawnpointItemDistribution = spawnpoint.ItemDistribution.ToList();
+            var existingItem = spawnpoint.Template.Items.FirstOrDefault(item => item.Template == templateId);
 
-            foreach ((MongoId templateId, double relativeProbability) in configService.LotsofLootPresetConfig.MarkedRoomConfig.ExtraItems)
+            // If the item already exists, add the new probability up on top of the already existing one
+            if (existingItem != null && existingItem.ComposedKey != null)
             {
-                var existingItem = spawnpoint.Template.Items.FirstOrDefault(item => item.Template == templateId);
-
-                // If the item already exists, add the new probability up on top of the already existing one
-                if (existingItem != null && existingItem.ComposedKey != null)
-                {
-                    var existingItemDistribution = spawnpointItemDistribution.First(distrib => distrib.ComposedKey?.Key == existingItem.ComposedKey);
-
-                    existingItemDistribution.RelativeProbability += relativeProbability;
-
-                    if (logger.IsDebug())
-                    {
-                        logger.Debug($"Modified {templateId} to new probability {existingItemDistribution.RelativeProbability}");
-                    }
-
-                    // Continue the loop here, we don't need to add a new one
-                    continue;
-                }
-
-                MongoId mongoId = new();
-
-                spawnpointTemplateItems.Add(new() { Id = mongoId, Template = templateId, ComposedKey = mongoId });
-
-                spawnpointItemDistribution.Add(
-                    new()
-                    {
-                        ComposedKey = new() { Key = mongoId },
-                        RelativeProbability = relativeProbability,
-                    }
+                var existingItemDistribution = spawnpointItemDistribution.First(distrib =>
+                    distrib.ComposedKey?.Key == existingItem.ComposedKey
                 );
 
+                existingItemDistribution.RelativeProbability += relativeProbability;
+
                 if (logger.IsDebug())
                 {
-                    logger.Debug($"Added {templateId} to {spawnpoint.Template.Id}");
+                    logger.Debug($"Modified {templateId} to new probability {existingItemDistribution.RelativeProbability}");
                 }
+
+                // Continue the loop here, we don't need to add a new one
+                continue;
             }
 
-            spawnpoint.Template.Items = spawnpointTemplateItems;
-            spawnpoint.ItemDistribution = spawnpointItemDistribution;
+            MongoId mongoId = new();
+
+            spawnpointTemplateItems.Add(
+                new()
+                {
+                    Id = mongoId,
+                    Template = templateId,
+                    ComposedKey = mongoId,
+                }
+            );
+
+            spawnpointItemDistribution.Add(
+                new()
+                {
+                    ComposedKey = new() { Key = mongoId },
+                    RelativeProbability = relativeProbability,
+                }
+            );
+
+            if (logger.IsDebug())
+            {
+                logger.Debug($"Added {templateId} to {spawnpoint.Template.Id}");
+            }
         }
 
-        private void AdjustMarkedRoomItemGroups(Spawnpoint spawnpoint)
+        spawnpoint.Template.Items = spawnpointTemplateItems;
+        spawnpoint.ItemDistribution = spawnpointItemDistribution;
+    }
+
+    private void AdjustMarkedRoomItemGroups(Spawnpoint spawnpoint)
+    {
+        if (spawnpoint?.Template?.Items is null)
         {
-            if (spawnpoint?.Template?.Items is null)
-            {
-                logger.Warning("Spawnpoint template is null?");
-                return;
-            }
+            logger.Warning("Spawnpoint template is null?");
+            return;
+        }
 
-            // Delicious bracket slop, my favorite
-            foreach (SptLootItem item in spawnpoint.Template.Items)
+        // Delicious bracket slop, my favorite
+        foreach (SptLootItem item in spawnpoint.Template.Items)
+        {
+            foreach ((MongoId templateId, double relativeProbability) in configService.LotsofLootPresetConfig.MarkedRoomConfig.ItemGroups)
             {
-                foreach ((MongoId templateId, double relativeProbability) in configService.LotsofLootPresetConfig.MarkedRoomConfig.ItemGroups)
+                if (itemHelper.IsOfBaseclass(item.Template, templateId))
                 {
-                    if (itemHelper.IsOfBaseclass(item.Template, templateId))
+                    foreach (LooseLootItemDistribution itemDistribution in spawnpoint.ItemDistribution ?? [])
                     {
-                        foreach (LooseLootItemDistribution itemDistribution in spawnpoint.ItemDistribution ?? [])
+                        if (itemDistribution.ComposedKey is null)
                         {
-                            if (itemDistribution.ComposedKey is null)
-                            {
-                                continue;
-                            }
+                            continue;
+                        }
 
-                            if (itemDistribution.ComposedKey.Key == item.ComposedKey)
-                            {
-                                itemDistribution.RelativeProbability *= relativeProbability;
+                        if (itemDistribution.ComposedKey.Key == item.ComposedKey)
+                        {
+                            itemDistribution.RelativeProbability *= relativeProbability;
 
-                                if (logger.IsDebug())
-                                {
-                                    logger.Debug($"markedItemGroups: Changed {item.Template} to {itemDistribution.RelativeProbability}");
-                                }
+                            if (logger.IsDebug())
+                            {
+                                logger.Debug($"markedItemGroups: Changed {item.Template} to {itemDistribution.RelativeProbability}");
                             }
                         }
                     }

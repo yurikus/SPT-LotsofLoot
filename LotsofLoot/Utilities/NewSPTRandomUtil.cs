@@ -1,11 +1,9 @@
 ﻿using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
-using Microsoft.Extensions.Logging;
 using SPTarkov.Common.Extensions;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.Models.Utils;
-using SPTarkov.Server.Core.Utils;
 using SPTarkov.Server.Core.Utils.Cloners;
 
 namespace LotsofLoot.Utilities;
@@ -66,7 +64,7 @@ public sealed class NewSPTRandomUtil(ISptLogger<NewSPTRandomUtil> logger, IClone
         }
 
         var range = max - min;
-        return min + (long) (GetSecureRandomNumber() * range);
+        return min + (long)(GetSecureRandomNumber() * range);
     }
 
     /// <summary>
@@ -122,7 +120,7 @@ public sealed class NewSPTRandomUtil(ISptLogger<NewSPTRandomUtil> logger, IClone
     {
         var num = percent * (number / 100);
 
-        return (float) Math.Round(num, toFixed);
+        return (float)Math.Round(num, toFixed);
     }
 
     /// <summary>
@@ -264,7 +262,7 @@ public sealed class NewSPTRandomUtil(ISptLogger<NewSPTRandomUtil> logger, IClone
         }
 
         // Return low directly when low and high are equal
-        return low == high ? low : RandomNumberGenerator.GetInt32(low, (int) high);
+        return low == high ? low : RandomNumberGenerator.GetInt32(low, (int)high);
     }
 
     /// <summary>
@@ -289,12 +287,12 @@ public sealed class NewSPTRandomUtil(ISptLogger<NewSPTRandomUtil> logger, IClone
         var min = Math.Min(val1, val2);
         var max = Math.Max(val1, val2);
 
-        var realPrecision = (long) Math.Pow(10, precision);
+        var realPrecision = (long)Math.Pow(10, precision);
 
-        var minInt = (long) (min * realPrecision);
-        var maxInt = (long) (max * realPrecision);
+        var minInt = (long)(min * realPrecision);
+        var maxInt = (long)(max * realPrecision);
 
-        return Math.Round(GetInt64(minInt, maxInt) / (double) realPrecision, precision);
+        return Math.Round(GetInt64(minInt, maxInt) / (double)realPrecision, precision);
     }
 
     /// <summary>
@@ -487,9 +485,9 @@ public sealed class NewSPTRandomUtil(ISptLogger<NewSPTRandomUtil> logger, IClone
     /// <returns>The number of decimal places, or 0 if none exist.</returns>
     public int GetNumberPrecision(double num)
     {
-        var preciseNum = (decimal) num;
+        var preciseNum = (decimal)num;
         var factor = 0;
-        while ((double) (preciseNum % 1) > double.Epsilon)
+        while ((double)(preciseNum % 1) > double.Epsilon)
         {
             preciseNum *= 10M;
             factor++;
@@ -511,6 +509,6 @@ public sealed class NewSPTRandomUtil(ISptLogger<NewSPTRandomUtil> logger, IClone
     /// <returns>true if success</returns>
     public bool RollChance(double chance, double scale = 1)
     {
-        return GetInt(1, (int) (100 * scale)) / (1 * scale) <= chance;
+        return GetInt(1, (int)(100 * scale)) / (1 * scale) <= chance;
     }
 }

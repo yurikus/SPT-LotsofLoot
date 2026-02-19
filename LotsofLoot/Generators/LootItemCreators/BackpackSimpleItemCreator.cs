@@ -24,7 +24,8 @@ public class BackpackSimpleItemCreator(
     LotsofLootItemHelper lotsofLootItemHelper,
     LotsOfLootLogger logger,
     NewSPTRandomUtil randomUtil,
-    ICloner cloner) : ILootItemCreator
+    ICloner cloner
+) : ILootItemCreator
 {
     private static readonly Dictionary<string, List<MongoId>> _itemFilterIndexCache = [];
     private static readonly HashSet<MongoId> _foreignCurrencies =
@@ -50,9 +51,20 @@ public class BackpackSimpleItemCreator(
         return false;
     }
 
-    public void CreateItem(List<Item> items, TemplateItem templateItem, Dictionary<string, IEnumerable<StaticAmmoDetails>> staticAmmoDictionary, LotsofLootLocationLootGenerator context)
+    public void CreateItem(
+        List<Item> items,
+        TemplateItem templateItem,
+        Dictionary<string, IEnumerable<StaticAmmoDetails>> staticAmmoDictionary,
+        LotsofLootLocationLootGenerator context
+    )
     {
-        List<Item> containerLoot = CreateLootInLooseContainer(items[0].Template, items[0].Id, staticAmmoDictionary, context, configService.LotsofLootPresetConfig.LootinLooseContainer.LootInContainerModifier);
+        List<Item> containerLoot = CreateLootInLooseContainer(
+            items[0].Template,
+            items[0].Id,
+            staticAmmoDictionary,
+            context,
+            configService.LotsofLootPresetConfig.LootinLooseContainer.LootInContainerModifier
+        );
 
         foreach (var containerItem in containerLoot)
         {
@@ -61,12 +73,12 @@ public class BackpackSimpleItemCreator(
     }
 
     public List<Item> CreateLootInLooseContainer(
-            string tpl,
-            MongoId id,
-            Dictionary<string, IEnumerable<StaticAmmoDetails>> staticAmmoDist,
-            LotsofLootLocationLootGenerator context,
-            double modifier = 0.5
-        )
+        string tpl,
+        MongoId id,
+        Dictionary<string, IEnumerable<StaticAmmoDetails>> staticAmmoDist,
+        LotsofLootLocationLootGenerator context,
+        double modifier = 0.5
+    )
     {
         if (modifier == 0)
         {
@@ -101,8 +113,8 @@ public class BackpackSimpleItemCreator(
         List<MongoId> whitelist = [.. firstFilter.Filter];
         HashSet<MongoId> blacklist = [.. firstFilter.ExcludedFilter ?? []];
 
-        int maxCells = (int) (firstGrid.Properties.CellsH * firstGrid.Properties.CellsV);
-        int amount = randomUtil.GetInt(1, (int) (maxCells * modifier));
+        int maxCells = (int)(firstGrid.Properties.CellsH * firstGrid.Properties.CellsV);
+        int amount = randomUtil.GetInt(1, (int)(maxCells * modifier));
 
         // Use cache for whitelist if available, if not available, generate new cache
         if (!_itemFilterIndexCache.TryGetValue(tpl, out var cachedWhiteList))
@@ -163,7 +175,7 @@ public class BackpackSimpleItemCreator(
             }
             else if (prices.TryGetValue(itemId, out var price))
             {
-                itemWeight = (int) Math.Round(1000 / Math.Pow(price, 1.0 / 3.0));
+                itemWeight = (int)Math.Round(1000 / Math.Pow(price, 1.0 / 3.0));
             }
 
             itemArray.Add(new ProbabilityObject<MongoId, int?>(itemId, itemWeight, null));
@@ -245,7 +257,7 @@ public class BackpackSimpleItemCreator(
 
             ContainerItem lootItem = context.CreateStaticLootItem(drawnItemTpl, staticAmmoDist, id);
             lootItem.Items.First().SlotId = "main";
-            fill += (int) (lootItem.Height * lootItem.Width);
+            fill += (int)(lootItem.Height * lootItem.Width);
 
             if (fill > amount)
             {

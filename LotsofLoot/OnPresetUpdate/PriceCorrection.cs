@@ -1,54 +1,51 @@
 ﻿using LotsofLoot.Models.Preset;
-using LotsofLoot.Services;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.Models.Common;
-using SPTarkov.Server.Core.Models.Eft.Common;
 using SPTarkov.Server.Core.Models.Spt.Templates;
 using SPTarkov.Server.Core.Servers;
 
-namespace LotsofLoot.OnPresetUpdate
+namespace LotsofLoot.OnPresetUpdate;
+
+[Injectable(InjectionType.Singleton)]
+public sealed class PriceCorrection(DatabaseServer databaseServer) : IOnPresetUpdate
 {
-    [Injectable(InjectionType.Singleton)]
-    public sealed class PriceCorrection(DatabaseServer databaseServer) : IOnPresetUpdate
+    private readonly Dictionary<MongoId, double?> _backupPriceCorrection = [];
+
+    public void Apply(LotsofLootPresetConfig preset)
     {
-        private readonly Dictionary<MongoId, double?> _backupPriceCorrection = [];
+        Templates databaseTemplates = databaseServer.GetTables().Templates;
 
-        public void Apply(LotsofLootPresetConfig preset)
+        foreach ((MongoId itemId, double adjustedPrice) in preset.General.PriceCorrection)
         {
-            Templates databaseTemplates = databaseServer.GetTables().Templates;
-
-            foreach ((MongoId itemId, double adjustedPrice) in preset.General.PriceCorrection)
+            if (!_backupPriceCorrection.ContainsKey(itemId))
             {
-                if (!_backupPriceCorrection.ContainsKey(itemId))
+                if (databaseTemplates.Prices.TryGetValue(itemId, out double value))
                 {
-                    if (databaseTemplates.Prices.TryGetValue(itemId, out double value))
-                    {
-                        _backupPriceCorrection[itemId] = value;
-                    }
-                    else
-                    {
-                        _backupPriceCorrection[itemId] = null;
-                    }
-
-                    databaseTemplates.Prices[itemId] = adjustedPrice;
-                }
-            }
-        }
-
-        public void Revert()
-        {
-            Templates databaseTemplates = databaseServer.GetTables().Templates;
-
-            foreach ((MongoId itemId, double? backupPrice) in _backupPriceCorrection)
-            {
-                if (backupPrice is not null)
-                {
-                    databaseTemplates.Prices[itemId] = backupPrice.Value;
+                    _backupPriceCorrection[itemId] = value;
                 }
                 else
                 {
-                    databaseTemplates.Prices.Remove(itemId);
+                    _backupPriceCorrection[itemId] = null;
                 }
+
+                databaseTemplates.Prices[itemId] = adjustedPrice;
+            }
+        }
+    }
+
+    public void Revert()
+    {
+        Templates databaseTemplates = databaseServer.GetTables().Templates;
+
+        foreach ((MongoId itemId, double? backupPrice) in _backupPriceCorrection)
+        {
+            if (backupPrice is not null)
+            {
+                databaseTemplates.Prices[itemId] = backupPrice.Value;
+            }
+            else
+            {
+                databaseTemplates.Prices.Remove(itemId);
             }
         }
     }

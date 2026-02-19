@@ -5,5 +5,10 @@ namespace LotsofLoot.Generators;
 
 public interface ILootSpawnpointDecider
 {
-    public List<Spawnpoint> Decide(string locationName, int desiredSpawnPointCount, ProbabilityObjectArray<string, Spawnpoint> spawnPointArray, List<Spawnpoint> guaranteedLoosePoints);
+    public List<Spawnpoint> Decide(
+        string locationName,
+        int desiredSpawnPointCount,
+        ProbabilityObjectArray<string, Spawnpoint> spawnPointArray,
+        List<Spawnpoint> guaranteedLoosePoints
+    );
 }

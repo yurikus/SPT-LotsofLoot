@@ -9,7 +9,12 @@ namespace LotsofLoot.Generators.LootSpawnpointDeciders;
 [Injectable]
 public sealed class GeneralLoot(ConfigService config, ICloner cloner) : ILootSpawnpointDecider
 {
-    public List<Spawnpoint> Decide(string locationName, int desiredSpawnPointCount, ProbabilityObjectArray<string, Spawnpoint> spawnPointArray, List<Spawnpoint> guaranteedLoosePoints)
+    public List<Spawnpoint> Decide(
+        string locationName,
+        int desiredSpawnPointCount,
+        ProbabilityObjectArray<string, Spawnpoint> spawnPointArray,
+        List<Spawnpoint> guaranteedLoosePoints
+    )
     {
         var regularArray = new ProbabilityObjectArray<string, Spawnpoint>(cloner);
 

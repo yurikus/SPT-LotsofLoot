@@ -1,5 +1,4 @@
 ﻿using LotsofLoot.Helpers;
-using LotsofLoot.Models.Preset;
 using LotsofLoot.Services;
 using LotsofLoot.Utilities;
 using SPTarkov.DI.Annotations;
@@ -16,345 +15,342 @@ using SPTarkov.Server.Core.Services;
 using SPTarkov.Server.Core.Utils.Cloners;
 using SPTarkov.Server.Core.Utils.Collections;
 
-namespace LotsofLoot.Generators
+namespace LotsofLoot.Generators;
+
+[Injectable]
+public class LotsofLootLocationLootGenerator(
+    ItemHelper itemHelper,
+    ItemFilterService itemFilterService,
+    NewSPTRandomUtil randomUtil,
+    SeasonalEventService seasonalEventService,
+    LotsOfLootLogger logger,
+    ConfigService config,
+    CounterTrackerHelper counterTrackerHelper,
+    ConfigServer configServer,
+    ServerLocalisationService serverLocalisationService,
+    LocationLootGeneratorReflectionHelper locationLootGeneratorReflectionHelper,
+    ICloner cloner,
+    IEnumerable<ILootSpawnpointDecider> lootSpawnpointDeciders,
+    IEnumerable<ILootItemCreator> lootItemCreators
+)
 {
-    [Injectable]
-    public class LotsofLootLocationLootGenerator(
-        ItemHelper itemHelper,
-        ItemFilterService itemFilterService,
-        NewSPTRandomUtil randomUtil,
-        SeasonalEventService seasonalEventService,
-        LotsOfLootLogger logger,
-        ConfigService config,
-        CounterTrackerHelper counterTrackerHelper,
-        ConfigServer configServer,
-        ServerLocalisationService serverLocalisationService,
-        LocationLootGeneratorReflectionHelper locationLootGeneratorReflectionHelper,
-        ICloner cloner,
-        IEnumerable<ILootSpawnpointDecider> lootSpawnpointDeciders,
-        IEnumerable<ILootItemCreator> lootItemCreators
+    private readonly LocationConfig _locationConfig = configServer.GetConfig<LocationConfig>();
+
+    public List<SpawnpointTemplate> GenerateDynamicLoot(
+        LooseLoot dynamicLootDist,
+        Dictionary<string, IEnumerable<StaticAmmoDetails>> staticAmmoDist,
+        string locationName
     )
     {
-        private readonly LocationConfig _locationConfig = configServer.GetConfig<LocationConfig>();
+        List<SpawnpointTemplate> loot = [];
+        List<Spawnpoint> dynamicForcedSpawnPoints = [];
 
-        public List<SpawnpointTemplate> GenerateDynamicLoot(
-            LooseLoot dynamicLootDist,
-            Dictionary<string, IEnumerable<StaticAmmoDetails>> staticAmmoDist,
-            string locationName
-        )
+        // Remove christmas items from loot data
+        if (!seasonalEventService.ChristmasEventEnabled())
         {
-            List<SpawnpointTemplate> loot = [];
-            List<Spawnpoint> dynamicForcedSpawnPoints = [];
-
-            // Remove christmas items from loot data
-            if (!seasonalEventService.ChristmasEventEnabled())
-            {
-                dynamicLootDist.Spawnpoints = dynamicLootDist.Spawnpoints.Where(point =>
-                    !point.Template.Id.StartsWith("christmas", StringComparison.OrdinalIgnoreCase)
-                );
-                dynamicLootDist.SpawnpointsForced = dynamicLootDist.SpawnpointsForced.Where(point =>
-                    !point.Template.Id.StartsWith("christmas", StringComparison.OrdinalIgnoreCase)
-                );
-            }
-
-            // Build the list of forced loot from both `SpawnpointsForced` and any point marked `IsAlwaysSpawn`
-            dynamicForcedSpawnPoints.AddRange(dynamicLootDist.SpawnpointsForced);
-            dynamicForcedSpawnPoints.AddRange(dynamicLootDist.Spawnpoints.Where(point => point.Template.IsAlwaysSpawn.GetValueOrDefault()));
-
-            loot.AddRange(
-                locationLootGeneratorReflectionHelper.GetForcedDynamicLoot(dynamicForcedSpawnPoints, locationName, staticAmmoDist)
+            dynamicLootDist.Spawnpoints = dynamicLootDist.Spawnpoints.Where(point =>
+                !point.Template.Id.StartsWith("christmas", StringComparison.OrdinalIgnoreCase)
             );
-
-            var desiredSpawnPointCount = 0;
-
-            if (config.LotsofLootPresetConfig.General.ReduceLowLooseLootRolls)
-            {
-                var mean = dynamicLootDist.SpawnpointCount.Mean;
-
-                var rawValue = randomUtil.GetNormallyDistributedRandomNumber(mean, dynamicLootDist.SpawnpointCount.Std);
-
-                if (rawValue < mean)
-                {
-                    logger.Debug($"Value ({rawValue}) is lower than mean ({mean})");
-
-                    var deviation = mean - rawValue;
-
-                    // Lower multiplier means more, after having tested for a bit 0.45 seems a good sweet spot for now.
-                    rawValue = mean - (deviation * config.LotsofLootPresetConfig.General.ReduceLowLooseLootRollsAmount);
-                }
-
-                desiredSpawnPointCount = (int) Math.Round(locationLootGeneratorReflectionHelper.GetLooseLootMultiplierForLocation(locationName) * rawValue);
-            }
-            else
-            {
-                // Default SPT calculation
-                desiredSpawnPointCount = (int) Math.Round(
-                locationLootGeneratorReflectionHelper.GetLooseLootMultiplierForLocation(locationName)
-                    * randomUtil.GetNormallyDistributedRandomNumber(
-                        dynamicLootDist.SpawnpointCount.Mean,
-                        dynamicLootDist.SpawnpointCount.Std
-                    )
+            dynamicLootDist.SpawnpointsForced = dynamicLootDist.SpawnpointsForced.Where(point =>
+                !point.Template.Id.StartsWith("christmas", StringComparison.OrdinalIgnoreCase)
             );
+        }
+
+        // Build the list of forced loot from both `SpawnpointsForced` and any point marked `IsAlwaysSpawn`
+        dynamicForcedSpawnPoints.AddRange(dynamicLootDist.SpawnpointsForced);
+        dynamicForcedSpawnPoints.AddRange(dynamicLootDist.Spawnpoints.Where(point => point.Template.IsAlwaysSpawn.GetValueOrDefault()));
+
+        loot.AddRange(locationLootGeneratorReflectionHelper.GetForcedDynamicLoot(dynamicForcedSpawnPoints, locationName, staticAmmoDist));
+
+        var desiredSpawnPointCount = 0;
+
+        if (config.LotsofLootPresetConfig.General.ReduceLowLooseLootRolls)
+        {
+            var mean = dynamicLootDist.SpawnpointCount.Mean;
+
+            var rawValue = randomUtil.GetNormallyDistributedRandomNumber(mean, dynamicLootDist.SpawnpointCount.Std);
+
+            if (rawValue < mean)
+            {
+                logger.Debug($"Value ({rawValue}) is lower than mean ({mean})");
+
+                var deviation = mean - rawValue;
+
+                // Lower multiplier means more, after having tested for a bit 0.45 seems a good sweet spot for now.
+                rawValue = mean - (deviation * config.LotsofLootPresetConfig.General.ReduceLowLooseLootRollsAmount);
             }
 
-            int lotsofLootDesiredSpawnPointCount = config.LotsofLootPresetConfig.Limits[locationName];
-
-            if (desiredSpawnPointCount > lotsofLootDesiredSpawnPointCount)
-            {
-                logger.Warning("SPT desires a higher spawn point count than Lots of Loot! Clamping.");
-
-                desiredSpawnPointCount = lotsofLootDesiredSpawnPointCount;
-            }
-
-            var blacklistedSpawnPoints = _locationConfig.LooseLootBlacklist.GetValueOrDefault(locationName);
-
-            // Init empty array to hold spawn points, letting us pick them pseudo-randomly
-            var spawnPointArray = new ProbabilityObjectArray<string, Spawnpoint>(cloner);
-
-            // Positions not in forced but have 100% chance to spawn
-            List<Spawnpoint> guaranteedLoosePoints = [];
-
-            var allDynamicSpawnPoints = dynamicLootDist.Spawnpoints;
-            foreach (var spawnPoint in allDynamicSpawnPoints)
-            {
-                if (spawnPoint is null)
-                {
-                    logger.Warning("Spawnpoint is null!");
-                    continue;
-                }
-
-                if (spawnPoint.Template?.Id is null)
-                {
-                    logger.Warning("Spawnpoint template id is null!");
-                    continue;
-                }
-
-                // Point is blacklisted, skip
-                if (blacklistedSpawnPoints?.Contains(spawnPoint.Template.Id) ?? false)
-                {
-                    if (logger.IsDebug())
-                    {
-                        logger.Debug($"Ignoring loose loot location: {spawnPoint.Template.Id}");
-                    }
-
-                    continue;
-                }
-
-                // We've handled IsAlwaysSpawn above, so skip them
-                if (spawnPoint.Template.IsAlwaysSpawn ?? false)
-                {
-                    continue;
-                }
-
-                // 100%, add it to guaranteed
-                if (spawnPoint.Probability == 1)
-                {
-                    guaranteedLoosePoints.Add(spawnPoint);
-                    continue;
-                }
-
-                spawnPointArray.Add(
-                    new ProbabilityObject<string, Spawnpoint>(spawnPoint.Template.Id, spawnPoint.Probability ?? 0, spawnPoint)
+            desiredSpawnPointCount = (int)
+                Math.Round(locationLootGeneratorReflectionHelper.GetLooseLootMultiplierForLocation(locationName) * rawValue);
+        }
+        else
+        {
+            // Default SPT calculation
+            desiredSpawnPointCount = (int)
+                Math.Round(
+                    locationLootGeneratorReflectionHelper.GetLooseLootMultiplierForLocation(locationName)
+                        * randomUtil.GetNormallyDistributedRandomNumber(
+                            dynamicLootDist.SpawnpointCount.Mean,
+                            dynamicLootDist.SpawnpointCount.Std
+                        )
                 );
-            }
+        }
 
-            List<Spawnpoint> chosenSpawnPoints = [];
+        int lotsofLootDesiredSpawnPointCount = config.LotsofLootPresetConfig.Limits[locationName];
 
-            foreach (var lootSpawnDecider in lootSpawnpointDeciders)
+        if (desiredSpawnPointCount > lotsofLootDesiredSpawnPointCount)
+        {
+            logger.Warning("SPT desires a higher spawn point count than Lots of Loot! Clamping.");
+
+            desiredSpawnPointCount = lotsofLootDesiredSpawnPointCount;
+        }
+
+        var blacklistedSpawnPoints = _locationConfig.LooseLootBlacklist.GetValueOrDefault(locationName);
+
+        // Init empty array to hold spawn points, letting us pick them pseudo-randomly
+        var spawnPointArray = new ProbabilityObjectArray<string, Spawnpoint>(cloner);
+
+        // Positions not in forced but have 100% chance to spawn
+        List<Spawnpoint> guaranteedLoosePoints = [];
+
+        var allDynamicSpawnPoints = dynamicLootDist.Spawnpoints;
+        foreach (var spawnPoint in allDynamicSpawnPoints)
+        {
+            if (spawnPoint is null)
             {
-                chosenSpawnPoints.AddRange(lootSpawnDecider.Decide(locationName, desiredSpawnPointCount, spawnPointArray, guaranteedLoosePoints));
+                logger.Warning("Spawnpoint is null!");
+                continue;
             }
 
-            // Do we have enough items in pool to fulfill requirement
-            var tooManySpawnPointsRequested = desiredSpawnPointCount - chosenSpawnPoints.Count > 0;
-            if (tooManySpawnPointsRequested)
+            if (spawnPoint.Template?.Id is null)
+            {
+                logger.Warning("Spawnpoint template id is null!");
+                continue;
+            }
+
+            // Point is blacklisted, skip
+            if (blacklistedSpawnPoints?.Contains(spawnPoint.Template.Id) ?? false)
             {
                 if (logger.IsDebug())
                 {
-                    logger.Debug(
-                        serverLocalisationService.GetText(
-                            "location-spawn_point_count_requested_vs_found",
-                            new
-                            {
-                                requested = desiredSpawnPointCount + guaranteedLoosePoints.Count,
-                                found = chosenSpawnPoints.Count,
-                                mapName = locationName,
-                            }
-                        )
-                    );
+                    logger.Debug($"Ignoring loose loot location: {spawnPoint.Template.Id}");
                 }
+
+                continue;
             }
 
-            // Iterate over spawnPoints
-            var seasonalEventActive = seasonalEventService.SeasonalEventEnabled();
-            var seasonalItemTplBlacklist = seasonalEventService.GetInactiveSeasonalEventItems();
-            foreach (var spawnPoint in chosenSpawnPoints)
+            // We've handled IsAlwaysSpawn above, so skip them
+            if (spawnPoint.Template.IsAlwaysSpawn ?? false)
             {
-                // SpawnPoint is invalid, skip it
-                if (spawnPoint.Template is null)
-                {
-                    logger.Warning(serverLocalisationService.GetText("location-missing_dynamic_template", spawnPoint.LocationId));
-
-                    continue;
-                }
-
-                // Ensure no blacklisted lootable items are in pool
-                spawnPoint.Template.Items = spawnPoint
-                    .Template.Items.Where(item => !itemFilterService.IsLootableItemBlacklisted(item.Template))
-                    .ToList();
-
-                // Ensure no seasonal items are in pool if not in-season
-                if (!seasonalEventActive)
-                {
-                    spawnPoint.Template.Items = spawnPoint.Template.Items.Where(item => !seasonalItemTplBlacklist.Contains(item.Template));
-                }
-
-                // Spawn point has no items after filtering, skip
-                if (spawnPoint.Template.Items is null || !spawnPoint.Template.Items.Any())
-                {
-                    if (logger.IsDebug())
-                    {
-                        logger.Debug(serverLocalisationService.GetText("location-spawnpoint_missing_items", spawnPoint.Template.Id));
-                    }
-
-                    continue;
-                }
-
-                // Get an array of allowed IDs after above filtering has occured
-                var validComposedKeys = spawnPoint.Template.Items.Select(item => item.ComposedKey).ToHashSet();
-
-                // Construct container to hold above filtered items, letting us pick an item for the spot
-                var itemArray = new ProbabilityObjectArray<string, double?>(cloner);
-                foreach (var itemDist in spawnPoint.ItemDistribution)
-                {
-                    if (!validComposedKeys.Contains(itemDist.ComposedKey.Key))
-                    {
-                        continue;
-                    }
-
-                    itemArray.Add(
-                        new ProbabilityObject<string, double?>(itemDist.ComposedKey.Key, itemDist.RelativeProbability ?? 0, null)
-                    );
-                }
-
-                if (itemArray.Count == 0)
-                {
-                    logger.Warning(serverLocalisationService.GetText("location-loot_pool_is_empty_skipping", spawnPoint.Template.Id));
-
-                    continue;
-                }
-
-                // Draw a random item from the spawn points possible items
-                var chosenComposedKey = itemArray.Draw().FirstOrDefault();
-                var chosenItem = spawnPoint.Template.Items.FirstOrDefault(item => item.ComposedKey == chosenComposedKey);
-                if (chosenItem is null)
-                {
-                    logger.Warning(
-                        $"Unable to find item with composed key: {chosenComposedKey}, skipping spawn point: {spawnPoint.LocationId} "
-                    );
-                    continue;
-                }
-
-                var createItemResult = CreateStaticLootItem(chosenItem.Template, staticAmmoDist, null);
-
-                // If count reaches max, skip adding item to loot
-                if (counterTrackerHelper.IncrementCount(createItemResult.Items.FirstOrDefault().Template))
-                {
-                    continue;
-                }
-
-                // Root id can change when generating a weapon, ensure ids match
-                spawnPoint.Template.Root = createItemResult.Items.FirstOrDefault().Id;
-
-                // Convert the processed items into the correct output type
-                var convertedItems = createItemResult.Items.Select(item => item.ToLootItem()).ToList();
-
-                // Overwrite entire pool with chosen item
-                spawnPoint.Template.Items = convertedItems;
-
-                loot.Add(spawnPoint.Template);
+                continue;
             }
 
-            return loot;
+            // 100%, add it to guaranteed
+            if (spawnPoint.Probability == 1)
+            {
+                guaranteedLoosePoints.Add(spawnPoint);
+                continue;
+            }
+
+            spawnPointArray.Add(new ProbabilityObject<string, Spawnpoint>(spawnPoint.Template.Id, spawnPoint.Probability ?? 0, spawnPoint));
         }
 
-        //Todo: Fully needs implementing
-        public Spawnpoint? HandleSpawningAlwaysSpawnSpawnpoint(List<Spawnpoint> spawnpoints, string location)
+        List<Spawnpoint> chosenSpawnPoints = [];
+
+        foreach (var lootSpawnDecider in lootSpawnpointDeciders)
         {
-            return null;
+            chosenSpawnPoints.AddRange(
+                lootSpawnDecider.Decide(locationName, desiredSpawnPointCount, spawnPointArray, guaranteedLoosePoints)
+            );
         }
 
-        public ContainerItem CreateStaticLootItem(
-            string chosenTpl,
-            Dictionary<string, IEnumerable<StaticAmmoDetails>> staticAmmoDist,
-            string? parentId = null
-        )
+        // Do we have enough items in pool to fulfill requirement
+        var tooManySpawnPointsRequested = desiredSpawnPointCount - chosenSpawnPoints.Count > 0;
+        if (tooManySpawnPointsRequested)
         {
-            TemplateItem? itemTemplate = GetItemTemplate(chosenTpl);
-
-            if (itemTemplate is null || itemTemplate.Properties is null)
+            if (logger.IsDebug())
             {
-                logger.Warning($"{chosenTpl} has no template?");
+                logger.Debug(
+                    serverLocalisationService.GetText(
+                        "location-spawn_point_count_requested_vs_found",
+                        new
+                        {
+                            requested = desiredSpawnPointCount + guaranteedLoosePoints.Count,
+                            found = chosenSpawnPoints.Count,
+                            mapName = locationName,
+                        }
+                    )
+                );
+            }
+        }
 
-                return new ContainerItem
-                {
-                    Items = [],
-                    Width = 0,
-                    Height = 0,
-                };
+        // Iterate over spawnPoints
+        var seasonalEventActive = seasonalEventService.SeasonalEventEnabled();
+        var seasonalItemTplBlacklist = seasonalEventService.GetInactiveSeasonalEventItems();
+        foreach (var spawnPoint in chosenSpawnPoints)
+        {
+            // SpawnPoint is invalid, skip it
+            if (spawnPoint.Template is null)
+            {
+                logger.Warning(serverLocalisationService.GetText("location-missing_dynamic_template", spawnPoint.LocationId));
+
+                continue;
             }
 
-            int? width = itemTemplate.Properties.Width;
-            int? height = itemTemplate.Properties.Height;
+            // Ensure no blacklisted lootable items are in pool
+            spawnPoint.Template.Items = spawnPoint
+                .Template.Items.Where(item => !itemFilterService.IsLootableItemBlacklisted(item.Template))
+                .ToList();
 
-            List<Item> items =
-            [
-                new()
-                {
-                    Id = new MongoId(),
-                    Template = chosenTpl,
-                    ParentId = parentId,
-                },
-            ];
-
-            foreach (var lootItemCreator in lootItemCreators)
+            // Ensure no seasonal items are in pool if not in-season
+            if (!seasonalEventActive)
             {
-                if (lootItemCreator.CanCreateItem(chosenTpl))
+                spawnPoint.Template.Items = spawnPoint.Template.Items.Where(item => !seasonalItemTplBlacklist.Contains(item.Template));
+            }
+
+            // Spawn point has no items after filtering, skip
+            if (spawnPoint.Template.Items is null || !spawnPoint.Template.Items.Any())
+            {
+                if (logger.IsDebug())
                 {
-                    Item rootItem = items[0];
-                    lootItemCreator.CreateItem(items, itemTemplate, staticAmmoDist, this);
-
-                    if (itemHelper.IsOfBaseclass(chosenTpl, BaseClasses.WEAPON))
-                    {
-                        ItemSize itemSize = itemHelper.GetItemSize(items, rootItem.Id);
-                        width = itemSize.Width;
-                        height = itemSize.Height;
-                    }
-
-                    break;
+                    logger.Debug(serverLocalisationService.GetText("location-spawnpoint_missing_items", spawnPoint.Template.Id));
                 }
+
+                continue;
             }
+
+            // Get an array of allowed IDs after above filtering has occured
+            var validComposedKeys = spawnPoint.Template.Items.Select(item => item.ComposedKey).ToHashSet();
+
+            // Construct container to hold above filtered items, letting us pick an item for the spot
+            var itemArray = new ProbabilityObjectArray<string, double?>(cloner);
+            foreach (var itemDist in spawnPoint.ItemDistribution)
+            {
+                if (!validComposedKeys.Contains(itemDist.ComposedKey.Key))
+                {
+                    continue;
+                }
+
+                itemArray.Add(new ProbabilityObject<string, double?>(itemDist.ComposedKey.Key, itemDist.RelativeProbability ?? 0, null));
+            }
+
+            if (itemArray.Count == 0)
+            {
+                logger.Warning(serverLocalisationService.GetText("location-loot_pool_is_empty_skipping", spawnPoint.Template.Id));
+
+                continue;
+            }
+
+            // Draw a random item from the spawn points possible items
+            var chosenComposedKey = itemArray.Draw().FirstOrDefault();
+            var chosenItem = spawnPoint.Template.Items.FirstOrDefault(item => item.ComposedKey == chosenComposedKey);
+            if (chosenItem is null)
+            {
+                logger.Warning(
+                    $"Unable to find item with composed key: {chosenComposedKey}, skipping spawn point: {spawnPoint.LocationId} "
+                );
+                continue;
+            }
+
+            var createItemResult = CreateStaticLootItem(chosenItem.Template, staticAmmoDist, null);
+
+            // If count reaches max, skip adding item to loot
+            if (counterTrackerHelper.IncrementCount(createItemResult.Items.FirstOrDefault().Template))
+            {
+                continue;
+            }
+
+            // Root id can change when generating a weapon, ensure ids match
+            spawnPoint.Template.Root = createItemResult.Items.FirstOrDefault().Id;
+
+            // Convert the processed items into the correct output type
+            var convertedItems = createItemResult.Items.Select(item => item.ToLootItem()).ToList();
+
+            // Overwrite entire pool with chosen item
+            spawnPoint.Template.Items = convertedItems;
+
+            loot.Add(spawnPoint.Template);
+        }
+
+        return loot;
+    }
+
+    //Todo: Fully needs implementing
+    public Spawnpoint? HandleSpawningAlwaysSpawnSpawnpoint(List<Spawnpoint> spawnpoints, string location)
+    {
+        return null;
+    }
+
+    public ContainerItem CreateStaticLootItem(
+        string chosenTpl,
+        Dictionary<string, IEnumerable<StaticAmmoDetails>> staticAmmoDist,
+        string? parentId = null
+    )
+    {
+        TemplateItem? itemTemplate = GetItemTemplate(chosenTpl);
+
+        if (itemTemplate is null || itemTemplate.Properties is null)
+        {
+            logger.Warning($"{chosenTpl} has no template?");
 
             return new ContainerItem
             {
-                Items = items,
-                Width = width,
-                Height = height,
+                Items = [],
+                Width = 0,
+                Height = 0,
             };
         }
 
-        private TemplateItem? GetItemTemplate(string itemTpl)
-        {
-            KeyValuePair<bool, TemplateItem?> item = itemHelper.GetItem(itemTpl);
+        int? width = itemTemplate.Properties.Width;
+        int? height = itemTemplate.Properties.Height;
 
-            if (item.Key)
+        List<Item> items =
+        [
+            new()
             {
-                return item.Value;
-            }
-            else
+                Id = new MongoId(),
+                Template = chosenTpl,
+                ParentId = parentId,
+            },
+        ];
+
+        foreach (var lootItemCreator in lootItemCreators)
+        {
+            if (lootItemCreator.CanCreateItem(chosenTpl))
             {
-                return null;
+                Item rootItem = items[0];
+                lootItemCreator.CreateItem(items, itemTemplate, staticAmmoDist, this);
+
+                if (itemHelper.IsOfBaseclass(chosenTpl, BaseClasses.WEAPON))
+                {
+                    ItemSize itemSize = itemHelper.GetItemSize(items, rootItem.Id);
+                    width = itemSize.Width;
+                    height = itemSize.Height;
+                }
+
+                break;
             }
+        }
+
+        return new ContainerItem
+        {
+            Items = items,
+            Width = width,
+            Height = height,
+        };
+    }
+
+    private TemplateItem? GetItemTemplate(string itemTpl)
+    {
+        KeyValuePair<bool, TemplateItem?> item = itemHelper.GetItem(itemTpl);
+
+        if (item.Key)
+        {
+            return item.Value;
+        }
+        else
+        {
+            return null;
         }
     }
 }

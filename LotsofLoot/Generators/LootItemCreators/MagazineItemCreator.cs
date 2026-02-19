@@ -24,7 +24,12 @@ public class MagazineItemCreator(ConfigServer configServer, ItemHelper itemHelpe
         return false;
     }
 
-    public void CreateItem(List<Item> items, TemplateItem templateItem, Dictionary<string, IEnumerable<StaticAmmoDetails>> staticAmmoDictionary, LotsofLootLocationLootGenerator context)
+    public void CreateItem(
+        List<Item> items,
+        TemplateItem templateItem,
+        Dictionary<string, IEnumerable<StaticAmmoDetails>> staticAmmoDictionary,
+        LotsofLootLocationLootGenerator context
+    )
     {
         if (!randomUtil.GetChance100(_locationConfig.MagazineLootHasAmmoChancePercent))
         {

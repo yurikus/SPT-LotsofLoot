@@ -11,7 +11,13 @@ using SPTarkov.Server.Core.Utils.Cloners;
 namespace LotsofLoot.Generators.LootItemCreators;
 
 [Injectable]
-public class WeaponItemCreator(ConfigServer configServer, ItemHelper itemHelper, PresetHelper presetHelper, NewSPTRandomUtil randomUtil, ICloner cloner) : ILootItemCreator
+public class WeaponItemCreator(
+    ConfigServer configServer,
+    ItemHelper itemHelper,
+    PresetHelper presetHelper,
+    NewSPTRandomUtil randomUtil,
+    ICloner cloner
+) : ILootItemCreator
 {
     private readonly LocationConfig _locationConfig = configServer.GetConfig<LocationConfig>();
 
@@ -25,7 +31,12 @@ public class WeaponItemCreator(ConfigServer configServer, ItemHelper itemHelper,
         return false;
     }
 
-    public void CreateItem(List<Item> items, TemplateItem templateItem, Dictionary<string, IEnumerable<StaticAmmoDetails>> staticAmmoDictionary, LotsofLootLocationLootGenerator context)
+    public void CreateItem(
+        List<Item> items,
+        TemplateItem templateItem,
+        Dictionary<string, IEnumerable<StaticAmmoDetails>> staticAmmoDictionary,
+        LotsofLootLocationLootGenerator context
+    )
     {
         Item rootItem = items[0];
 

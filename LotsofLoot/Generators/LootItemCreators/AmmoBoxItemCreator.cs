@@ -19,7 +19,12 @@ public class AmmoBoxItemCreator(ItemHelper itemHelper) : ILootItemCreator
         return false;
     }
 
-    public void CreateItem(List<Item> items, TemplateItem templateItem, Dictionary<string, IEnumerable<StaticAmmoDetails>> staticAmmoDictionary, LotsofLootLocationLootGenerator context)
+    public void CreateItem(
+        List<Item> items,
+        TemplateItem templateItem,
+        Dictionary<string, IEnumerable<StaticAmmoDetails>> staticAmmoDictionary,
+        LotsofLootLocationLootGenerator context
+    )
     {
         itemHelper.AddCartridgesToAmmoBox(items, templateItem);
     }

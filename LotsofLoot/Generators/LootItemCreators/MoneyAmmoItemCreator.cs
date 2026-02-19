@@ -20,9 +20,14 @@ public class MoneyAmmoItemCreator(ItemHelper itemHelper, NewSPTRandomUtil random
         return false;
     }
 
-    public void CreateItem(List<Item> items, TemplateItem templateItem, Dictionary<string, IEnumerable<StaticAmmoDetails>> staticAmmoDictionary, LotsofLootLocationLootGenerator context)
+    public void CreateItem(
+        List<Item> items,
+        TemplateItem templateItem,
+        Dictionary<string, IEnumerable<StaticAmmoDetails>> staticAmmoDictionary,
+        LotsofLootLocationLootGenerator context
+    )
     {
-        int stackCount = randomUtil.GetInt((int) templateItem.Properties.StackMinRandom, (int) templateItem.Properties.StackMaxRandom);
+        int stackCount = randomUtil.GetInt((int)templateItem.Properties.StackMinRandom, (int)templateItem.Properties.StackMaxRandom);
 
         items[0].Upd = new Upd { StackObjectsCount = stackCount };
     }
