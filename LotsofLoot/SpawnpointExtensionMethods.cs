@@ -2,7 +2,7 @@
 
 namespace LotsofLoot
 {
-    public static class ExtensionMethods
+    public static class SpawnpointExtensionMethods
     {
         public static bool IsMarkedRoomSpawnpoint(this Spawnpoint spawnpoint, string locationId)
         {
@@ -16,22 +16,27 @@ namespace LotsofLoot
             if (locationId == "bigmap")
             {
                 // Dorms 314 Marked Room
-                if (pos.X > 180 && pos.X < 185 && pos.Z > 180 && pos.Z < 185 && pos.Y > 6 && pos.Y < 7)
+                if (pos.X > 180 && pos.X < 190 && pos.Y > 5 && pos.Y < 8 && pos.Z > 180 && pos.Z < 185)
                 {
                     return true;
                 }
             }
             else if (locationId == "rezervbase")
             {
-                if (pos.X > -125 && pos.X < -120 && pos.Z > 25 && pos.Z < 30 && pos.Y > -15 && pos.Y < -14)
+                // RB-PKPM
+                if (pos.X > -125 && pos.X < -120 && pos.Y > -15 && pos.Y < -13 && pos.Z > 25 && pos.Z < 31)
                 {
                     return true;
                 }
-                else if (pos.X > -155 && pos.X < -150 && pos.Z > 70 && pos.Z < 75 && pos.Y > -9 && pos.Y < -8)
+
+                // RB-BK
+                if (pos.X > -157 && pos.X < -150 && pos.Y > -10 && pos.Y < -7 && pos.Z > 70 && pos.Z < 76)
                 {
                     return true;
                 }
-                else if (pos.X > 190 && pos.X < 195 && pos.Z > -230 && pos.Z < -225 && pos.Y > -6 && pos.Y < -5)
+
+                // RB-VO
+                if (pos.X > 189 && pos.X < 195 && pos.Y > -7 && pos.Y < -5 && pos.Z > -230 && pos.Z < -224)
                 {
                     return true;
                 }

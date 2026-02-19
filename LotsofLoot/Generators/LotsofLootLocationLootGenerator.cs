@@ -67,7 +67,7 @@ namespace LotsofLoot.Generators
 
             var desiredSpawnPointCount = 0;
 
-            if(config.LotsofLootPresetConfig.General.ReduceLowLooseLootRolls)
+            if (config.LotsofLootPresetConfig.General.ReduceLowLooseLootRolls)
             {
                 var mean = dynamicLootDist.SpawnpointCount.Mean;
 
@@ -83,12 +83,12 @@ namespace LotsofLoot.Generators
                     rawValue = mean - (deviation * config.LotsofLootPresetConfig.General.ReduceLowLooseLootRollsAmount);
                 }
 
-                desiredSpawnPointCount = (int)Math.Round(locationLootGeneratorReflectionHelper.GetLooseLootMultiplierForLocation(locationName) * rawValue);
+                desiredSpawnPointCount = (int) Math.Round(locationLootGeneratorReflectionHelper.GetLooseLootMultiplierForLocation(locationName) * rawValue);
             }
             else
             {
                 // Default SPT calculation
-                desiredSpawnPointCount = (int)Math.Round(
+                desiredSpawnPointCount = (int) Math.Round(
                 locationLootGeneratorReflectionHelper.GetLooseLootMultiplierForLocation(locationName)
                     * randomUtil.GetNormallyDistributedRandomNumber(
                         dynamicLootDist.SpawnpointCount.Mean,
@@ -117,13 +117,13 @@ namespace LotsofLoot.Generators
             var allDynamicSpawnPoints = dynamicLootDist.Spawnpoints;
             foreach (var spawnPoint in allDynamicSpawnPoints)
             {
-                if(spawnPoint is null)
+                if (spawnPoint is null)
                 {
                     logger.Warning("Spawnpoint is null!");
                     continue;
                 }
 
-                if(spawnPoint.Template?.Id is null)
+                if (spawnPoint.Template?.Id is null)
                 {
                     logger.Warning("Spawnpoint template id is null!");
                     continue;
@@ -158,39 +158,11 @@ namespace LotsofLoot.Generators
                 );
             }
 
-            // Select a number of spawn points to add loot to
-            // Add ALL loose loot with 100% chance to pool
             List<Spawnpoint> chosenSpawnPoints = [];
-            chosenSpawnPoints.AddRange(guaranteedLoosePoints);
 
-            var randomSpawnPointCount = desiredSpawnPointCount - chosenSpawnPoints.Count;
-            // Only draw random spawn points if needed
-            if (randomSpawnPointCount > 0 && spawnPointArray.Count > 0)
-            // Add randomly chosen spawn points
+            foreach (var lootSpawnDecider in lootSpawnpointDeciders)
             {
-                if (!config.LotsofLootPresetConfig.General.AllowLootOverlay)
-                {
-                    foreach (var si in spawnPointArray.DrawAndRemove(randomSpawnPointCount))
-                    {
-                        chosenSpawnPoints.Add(spawnPointArray.Data(si));
-                    }
-                }
-                else
-                {
-                    // Draw without removing if we allow loot overlay
-                    // We also have to clone here to make sure we aren't using an original
-                    // spawnpoint's templates because those will get emptied after being used
-                    foreach (var si in spawnPointArray.Draw(randomSpawnPointCount))
-                    {
-                        chosenSpawnPoints.Add(cloner.Clone(spawnPointArray.Data(si)));
-                    }
-                }
-            }
-
-            if (!config.LotsofLootPresetConfig.General.AllowLootOverlay)
-            {
-                // Filter out duplicate locationIds // prob can be done better
-                chosenSpawnPoints = chosenSpawnPoints.GroupBy(spawnPoint => spawnPoint.LocationId).Select(group => group.First()).ToList();
+                chosenSpawnPoints.AddRange(lootSpawnDecider.Decide(locationName, desiredSpawnPointCount, spawnPointArray, guaranteedLoosePoints));
             }
 
             // Do we have enough items in pool to fulfill requirement

@@ -9,7 +9,7 @@ using SPTarkov.Server.Core.Utils;
 namespace LotsofLoot.Helpers
 {
     [Injectable]
-    public class MarkedRoomHelper(ConfigService configService, HashUtil hashUtil, ItemHelper itemHelper, LotsOfLootLogger logger)
+    public class MarkedRoomHelper(ConfigService configService, ItemHelper itemHelper, LotsOfLootLogger logger)
     {
         public void AdjustMarkedRooms(string locationId, Spawnpoint spawnpoint)
         {
@@ -20,7 +20,6 @@ namespace LotsofLoot.Helpers
                     logger.Debug($"Marked room ({locationId}) {spawnpoint.Template.Id}");
                 }
 
-                spawnpoint.Probability *= configService.LotsofLootPresetConfig.MarkedRoomConfig.Multiplier[locationId.ToLowerInvariant()];
                 AddExtraItemsToMarkedRoom(spawnpoint);
 
                 AdjustMarkedRoomItemGroups(spawnpoint);
