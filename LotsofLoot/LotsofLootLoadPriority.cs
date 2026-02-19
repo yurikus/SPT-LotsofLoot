@@ -4,7 +4,9 @@
     {
         /// <summary>
         /// After SVM, hopefully
+        ///
+        /// I have no idea why WTT armory has such a crazy high offset
         /// </summary>
-        public const int LotsofLootPriorityOffset = 6;
+        public const int LotsofLootPriorityOffset = 1000;
     }
 }
