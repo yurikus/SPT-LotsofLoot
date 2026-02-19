@@ -12,7 +12,7 @@ namespace LotsofLoot.Services
     public class LazyLoadHandlerService(
         DatabaseService databaseService,
         ConfigService configService,
-        MarkedRoomHelper markedRoomHelper,
+        LootRoomHelper markedRoomHelper,
         LotsOfLootLogger logger
     )
     {
@@ -98,7 +98,7 @@ namespace LotsofLoot.Services
                 ChangeRelativeProbabilityInPool(locationId, spawnpoint);
                 ChangeProbabilityOfPool(locationId, spawnpoint);
 
-                markedRoomHelper.AdjustMarkedRooms(locationId, spawnpoint);
+                markedRoomHelper.AdjustLootRooms(locationId, spawnpoint);
 
                 //Todo: This still needs AddToRustedKeyRoom for streets
             }

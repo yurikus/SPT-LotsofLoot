@@ -9,9 +9,9 @@ using SPTarkov.Server.Core.Utils;
 namespace LotsofLoot.Helpers
 {
     [Injectable]
-    public class MarkedRoomHelper(ConfigService configService, HashUtil hashUtil, ItemHelper itemHelper, LotsOfLootLogger logger)
+    public class LootRoomHelper(ConfigService configService, HashUtil hashUtil, ItemHelper itemHelper, LotsOfLootLogger logger)
     {
-        public void AdjustMarkedRooms(string locationId, Spawnpoint spawnpoint)
+        public void AdjustLootRooms(string locationId, Spawnpoint spawnpoint)
         {
             if (spawnpoint.IsMarkedRoomSpawnpoint(locationId.ToLowerInvariant()))
             {
@@ -23,7 +23,18 @@ namespace LotsofLoot.Helpers
                 spawnpoint.Probability *= configService.LotsOfLootConfig.MarkedRoomConfig.Multiplier[locationId.ToLowerInvariant()];
                 AddExtraItemsToMarkedRoom(spawnpoint);
 
-                AdjustMarkedRoomItemGroups(spawnpoint);
+                AdjustLootRoomItemGroups(spawnpoint);
+            }
+            else if (spawnpoint.IsRefKeySpawnpoint(locationId.ToLowerInvariant()))
+            {
+                if (logger.IsDebug())
+                {
+                    logger.Debug($"Ref room ({locationId}) {spawnpoint.Template.Id}");
+                }
+
+                spawnpoint.Probability *= configService.LotsOfLootConfig.RefRoomConfig.Multiplier[locationId.ToLowerInvariant()];
+
+                AdjustLootRoomItemGroups(spawnpoint, true);
             }
         }
 
@@ -74,7 +85,7 @@ namespace LotsofLoot.Helpers
             spawnpoint.ItemDistribution = spawnpointItemDistribution;
         }
 
-        private void AdjustMarkedRoomItemGroups(Spawnpoint spawnpoint)
+        private void AdjustLootRoomItemGroups(Spawnpoint spawnpoint, bool refRoom = false)
         {
             if (spawnpoint?.Template?.Items is null)
             {
@@ -82,10 +93,14 @@ namespace LotsofLoot.Helpers
                 return;
             }
 
+            var itemGroups = refRoom
+                ? configService.LotsOfLootConfig.RefRoomConfig.ItemGroups
+                : configService.LotsOfLootConfig.MarkedRoomConfig.ItemGroups;
+
             // Delicious bracket slop, my favorite
             foreach (SptLootItem item in spawnpoint.Template.Items)
             {
-                foreach ((MongoId templateId, double relativeProbability) in configService.LotsOfLootConfig.MarkedRoomConfig.ItemGroups)
+                foreach ((MongoId templateId, double relativeProbability) in itemGroups)
                 {
                     if (itemHelper.IsOfBaseclass(item.Template, templateId))
                     {
@@ -102,7 +117,7 @@ namespace LotsofLoot.Helpers
 
                                 if (logger.IsDebug())
                                 {
-                                    logger.Debug($"markedItemGroups: Changed {item.Template} to {itemDistribution.RelativeProbability}");
+                                    logger.Debug($"lootItemGroups: Changed {item.Template} to {itemDistribution.RelativeProbability}");
                                 }
                             }
                         }
