@@ -8,11 +8,13 @@ using SPTarkov.Server.Core.Models.Eft.Common;
 namespace LotsofLoot.Helpers;
 
 [Injectable]
-public class MarkedRoomHelper(ConfigService configService, ItemHelper itemHelper, LotsOfLootLogger logger)
+public class LootRoomHelper(ConfigService configService, ItemHelper itemHelper, LotsOfLootLogger logger)
 {
-    public void AdjustMarkedRooms(string locationId, Spawnpoint spawnpoint)
+    public void AdjustLootRooms(string locationId, Spawnpoint spawnpoint)
     {
-        if (spawnpoint.IsMarkedRoomSpawnpoint(locationId.ToLowerInvariant()))
+        var location = locationId.ToLowerInvariant();
+
+        if (spawnpoint.IsMarkedRoomSpawnpoint(location))
         {
             if (logger.IsDebug())
             {
@@ -22,6 +24,16 @@ public class MarkedRoomHelper(ConfigService configService, ItemHelper itemHelper
             AddExtraItemsToMarkedRoom(spawnpoint);
 
             AdjustMarkedRoomItemGroups(spawnpoint);
+        }
+
+        if (spawnpoint.IsRefKeySpawnpoint(location))
+        {
+            if (logger.IsDebug())
+            {
+                logger.Debug($"Ref room ({locationId}) {spawnpoint.Template.Id}");
+            }
+
+            AdjustRefRoomItemGroups(spawnpoint);
         }
     }
 
@@ -110,6 +122,43 @@ public class MarkedRoomHelper(ConfigService configService, ItemHelper itemHelper
                             if (logger.IsDebug())
                             {
                                 logger.Debug($"markedItemGroups: Changed {item.Template} to {itemDistribution.RelativeProbability}");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void AdjustRefRoomItemGroups(Spawnpoint spawnpoint)
+    {
+        if (spawnpoint?.Template?.Items is null)
+        {
+            logger.Warning("Spawnpoint template is null?");
+            return;
+        }
+
+        // Delicious bracket slop, my favorite
+        foreach (SptLootItem item in spawnpoint.Template.Items)
+        {
+            foreach ((MongoId templateId, double relativeProbability) in configService.LotsofLootPresetConfig.MarkedRoomConfig.ItemGroups)
+            {
+                if (itemHelper.IsOfBaseclass(item.Template, templateId))
+                {
+                    foreach (LooseLootItemDistribution itemDistribution in spawnpoint.ItemDistribution ?? [])
+                    {
+                        if (itemDistribution.ComposedKey is null)
+                        {
+                            continue;
+                        }
+
+                        if (itemDistribution.ComposedKey.Key == item.ComposedKey)
+                        {
+                            itemDistribution.RelativeProbability *= relativeProbability;
+
+                            if (logger.IsDebug())
+                            {
+                                logger.Debug($"Ref key room: Changed {item.Template} to {itemDistribution.RelativeProbability}");
                             }
                         }
                     }

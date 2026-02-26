@@ -66,6 +66,17 @@
       "tarkovstreets": 4,
       "lighthouse": 4
     },
+    "RefRoomConfig": {
+      "Multiplier": {
+        "woods": 1,
+        "interchange": 1,
+        "shoreline": 1,
+        "lighthouse": 1
+      },
+      "ItemGroups": {
+        "57864a3d24597754843f8721": 0
+      }
+    },
     "ExtraItems": {
       "619cbf9e0a7c3a1a2731940a": 1,
       "59fb023c86f7746d0d4b423c": 2,
@@ -80,6 +91,17 @@
     },
     "ItemGroups": {
       "5422acb9af1c889c16000029": 0.2
+    }
+  },
+  "RefRoomConfig": {
+    "Multiplier": {
+      "woods": 1,
+      "interchange": 1,
+      "shoreline": 1,
+      "lighthouse": 1
+    },
+    "ItemGroups": {
+      "57864a3d24597754843f8721": 0
     }
   },
   "LootinLooseContainer": {

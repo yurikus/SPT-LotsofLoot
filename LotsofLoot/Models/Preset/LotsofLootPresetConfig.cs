@@ -24,6 +24,7 @@ public sealed class LotsofLootPresetConfig
     public required Dictionary<string, int> Limits { get; set; }
 
     public required MarkedRoomPresetConfig MarkedRoomConfig { get; set; }
+    public required RefRoomPresetConfig RefRoomConfig { get; set; }
     public required LootInLooseContainerPresetConfig LootinLooseContainer { get; set; }
 
     /// <summary>
