@@ -8,11 +8,13 @@ using SPTarkov.Server.Core.Models.Eft.Common;
 
 namespace LotsofLoot.Overrides.Generators;
 
-public class GenerateDynamicLootOverride : AbstractPatch
+public sealed class GenerateDynamicLootOverride : AbstractPatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        return typeof(LocationLootGenerator).GetMethod(nameof(LocationLootGenerator.GenerateDynamicLoot));
+        return typeof(LocationLootGenerator).GetMethod(nameof(LocationLootGenerator.GenerateDynamicLoot))
+            ?? throw new InvalidOperationException("Could not find LocationLootGenerator.GenerateDynamicLoot!");
+        ;
     }
 
     [PatchPrefix]
@@ -33,11 +35,12 @@ public class GenerateDynamicLootOverride : AbstractPatch
     }
 }
 
-public class GenerateStaticLootOverride : AbstractPatch
+public sealed class GenerateStaticLootOverride : AbstractPatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        return typeof(LocationLootGenerator).GetMethod("CreateStaticLootItem", BindingFlags.Instance | BindingFlags.NonPublic);
+        return typeof(LocationLootGenerator).GetMethod("CreateStaticLootItem", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Could not find LocationLootGenerator.CreateStaticLootItem!");
     }
 
     [PatchPrefix]

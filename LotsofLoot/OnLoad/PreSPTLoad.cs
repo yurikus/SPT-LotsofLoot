@@ -7,7 +7,7 @@ using SPTarkov.Server.Core.DI;
 
 namespace LotsofLoot.OnLoad;
 
-[Injectable(TypePriority = OnLoadOrder.PreSptModLoader + LotsofLootLoadPriority.LotsofLootPriorityOffset)]
+[Injectable(TypePriority = OnLoadOrder.PreSptModLoader + LotsofLootModMetadata.LotsofLootPriorityOffset)]
 public class PreSPTLoad(ConfigService configService, LotsOfLootLogger logger) : IOnLoad
 {
     private bool _overridesInjected = false;
@@ -24,7 +24,11 @@ public class PreSPTLoad(ConfigService configService, LotsOfLootLogger logger) : 
         {
             foreach (AbstractPatch patch in _patches)
             {
-                logger.Info($"Loading patch: {patch.GetType().Name}");
+                if (logger.IsDebug())
+                {
+                    logger.Debug($"Loading patch: {patch.GetType().Name}");
+                }
+
                 patch.Enable();
             }
         }

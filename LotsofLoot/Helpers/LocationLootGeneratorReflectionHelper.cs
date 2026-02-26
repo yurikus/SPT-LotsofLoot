@@ -8,21 +8,32 @@ namespace LotsofLoot.Helpers;
 [Injectable]
 public class LocationLootGeneratorReflectionHelper(LocationLootGenerator locationLootGenerator)
 {
+    private static MethodInfo? _forcedDynamicLootMethod = null;
+    private static MethodInfo? _looseLootMultiplierForLocationMethod = null;
+
     public List<SpawnpointTemplate> GetForcedDynamicLoot(
         IEnumerable<Spawnpoint> forcedSpawnPoints,
         string locationName,
         Dictionary<string, IEnumerable<StaticAmmoDetails>> staticAmmoDist
     )
     {
-        var type = locationLootGenerator.GetType();
-        var method = type.GetMethod("GetForcedDynamicLoot", BindingFlags.Instance | BindingFlags.NonPublic);
-
-        if (method == null)
+        if (_forcedDynamicLootMethod is null)
         {
-            throw new MissingMethodException($"Could not find 'GetForcedDynamicLoot' on {type.FullName}");
+            var type = locationLootGenerator.GetType();
+            var method = type.GetMethod("GetForcedDynamicLoot", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            if (method == null)
+            {
+                throw new MissingMethodException($"Could not find 'GetForcedDynamicLoot' on {type.FullName}");
+            }
+
+            _forcedDynamicLootMethod = method;
         }
 
-        if (method.Invoke(locationLootGenerator, [forcedSpawnPoints, locationName, staticAmmoDist]) is not List<SpawnpointTemplate> result)
+        if (
+            _forcedDynamicLootMethod.Invoke(locationLootGenerator, [forcedSpawnPoints, locationName, staticAmmoDist])
+            is not List<SpawnpointTemplate> result
+        )
         {
             throw new NullReferenceException("SpawnpointTemplate List is null");
         }
@@ -32,15 +43,20 @@ public class LocationLootGeneratorReflectionHelper(LocationLootGenerator locatio
 
     public double GetLooseLootMultiplierForLocation(string location)
     {
-        var type = locationLootGenerator.GetType();
-        var method = type.GetMethod("GetLooseLootMultiplierForLocation", BindingFlags.Instance | BindingFlags.NonPublic);
-
-        if (method == null)
+        if (_looseLootMultiplierForLocationMethod is null)
         {
-            throw new MissingMethodException($"Could not find 'GetLooseLootMultiplierForLocation' on {type.FullName}");
+            var type = locationLootGenerator.GetType();
+            var method = type.GetMethod("GetLooseLootMultiplierForLocation", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            if (method == null)
+            {
+                throw new MissingMethodException($"Could not find 'GetLooseLootMultiplierForLocation' on {type.FullName}");
+            }
+
+            _looseLootMultiplierForLocationMethod = method;
         }
 
-        if (method.Invoke(locationLootGenerator, [location]) is not double result)
+        if (_looseLootMultiplierForLocationMethod.Invoke(locationLootGenerator, [location]) is not double result)
         {
             throw new NullReferenceException("Double is null");
         }

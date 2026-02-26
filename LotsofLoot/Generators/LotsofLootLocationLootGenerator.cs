@@ -43,22 +43,72 @@ public class LotsofLootLocationLootGenerator(
     )
     {
         List<SpawnpointTemplate> loot = [];
-        List<Spawnpoint> dynamicForcedSpawnPoints = [];
 
-        // Remove christmas items from loot data
-        if (!seasonalEventService.ChristmasEventEnabled())
+        bool christmasEnabled = seasonalEventService.ChristmasEventEnabled();
+        bool seasonalEventActive = seasonalEventService.SeasonalEventEnabled();
+        var seasonalItemTplBlacklist = seasonalEventService.GetInactiveSeasonalEventItems();
+
+        // Build the list of forced loot from `SpawnpointsForced`, remove christmas items if season is not active
+        List<Spawnpoint> dynamicForcedSpawnPoints = christmasEnabled
+            ? [.. dynamicLootDist.SpawnpointsForced]
+            : dynamicLootDist
+                .SpawnpointsForced.Where(point => !point.Template.Id.StartsWith("christmas", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+        var blacklistedSpawnPoints = _locationConfig.LooseLootBlacklist.GetValueOrDefault(locationName);
+
+        // Init empty array to hold spawn points, letting us pick them pseudo-randomly
+        var spawnPointArray = new ProbabilityObjectArray<string, Spawnpoint>(cloner);
+
+        // Positions not in forced but have 100% chance to spawn
+        List<Spawnpoint> guaranteedLoosePoints = [];
+
+        foreach (var spawnPoint in dynamicLootDist.Spawnpoints)
         {
-            dynamicLootDist.Spawnpoints = dynamicLootDist.Spawnpoints.Where(point =>
-                !point.Template.Id.StartsWith("christmas", StringComparison.OrdinalIgnoreCase)
-            );
-            dynamicLootDist.SpawnpointsForced = dynamicLootDist.SpawnpointsForced.Where(point =>
-                !point.Template.Id.StartsWith("christmas", StringComparison.OrdinalIgnoreCase)
-            );
-        }
+            if (spawnPoint is null)
+            {
+                logger.Warning("Spawnpoint is null!");
+                continue;
+            }
 
-        // Build the list of forced loot from both `SpawnpointsForced` and any point marked `IsAlwaysSpawn`
-        dynamicForcedSpawnPoints.AddRange(dynamicLootDist.SpawnpointsForced);
-        dynamicForcedSpawnPoints.AddRange(dynamicLootDist.Spawnpoints.Where(point => point.Template.IsAlwaysSpawn.GetValueOrDefault()));
+            if (spawnPoint.Template?.Id is null)
+            {
+                logger.Warning("Spawnpoint template id is null!");
+                continue;
+            }
+
+            if (!christmasEnabled && spawnPoint.Template.Id.StartsWith("christmas", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            // Point is blacklisted, skip
+            if (blacklistedSpawnPoints?.Contains(spawnPoint.Template.Id) ?? false)
+            {
+                if (logger.IsDebug())
+                {
+                    logger.Debug($"Ignoring loose loot location: {spawnPoint.Template.Id}");
+                }
+
+                continue;
+            }
+
+            // Handle IsAlwaysSpawn, add to forced spawn points and skip these
+            if (spawnPoint.Template.IsAlwaysSpawn.GetValueOrDefault())
+            {
+                dynamicForcedSpawnPoints.Add(spawnPoint);
+                continue;
+            }
+
+            // 100%, add it to guaranteed
+            if (spawnPoint.Probability == 1)
+            {
+                guaranteedLoosePoints.Add(spawnPoint);
+                continue;
+            }
+
+            spawnPointArray.Add(new ProbabilityObject<string, Spawnpoint>(spawnPoint.Template.Id, spawnPoint.Probability ?? 0, spawnPoint));
+        }
 
         loot.AddRange(locationLootGeneratorReflectionHelper.GetForcedDynamicLoot(dynamicForcedSpawnPoints, locationName, staticAmmoDist));
 
@@ -105,56 +155,6 @@ public class LotsofLootLocationLootGenerator(
             desiredSpawnPointCount = lotsofLootDesiredSpawnPointCount;
         }
 
-        var blacklistedSpawnPoints = _locationConfig.LooseLootBlacklist.GetValueOrDefault(locationName);
-
-        // Init empty array to hold spawn points, letting us pick them pseudo-randomly
-        var spawnPointArray = new ProbabilityObjectArray<string, Spawnpoint>(cloner);
-
-        // Positions not in forced but have 100% chance to spawn
-        List<Spawnpoint> guaranteedLoosePoints = [];
-
-        var allDynamicSpawnPoints = dynamicLootDist.Spawnpoints;
-        foreach (var spawnPoint in allDynamicSpawnPoints)
-        {
-            if (spawnPoint is null)
-            {
-                logger.Warning("Spawnpoint is null!");
-                continue;
-            }
-
-            if (spawnPoint.Template?.Id is null)
-            {
-                logger.Warning("Spawnpoint template id is null!");
-                continue;
-            }
-
-            // Point is blacklisted, skip
-            if (blacklistedSpawnPoints?.Contains(spawnPoint.Template.Id) ?? false)
-            {
-                if (logger.IsDebug())
-                {
-                    logger.Debug($"Ignoring loose loot location: {spawnPoint.Template.Id}");
-                }
-
-                continue;
-            }
-
-            // We've handled IsAlwaysSpawn above, so skip them
-            if (spawnPoint.Template.IsAlwaysSpawn ?? false)
-            {
-                continue;
-            }
-
-            // 100%, add it to guaranteed
-            if (spawnPoint.Probability == 1)
-            {
-                guaranteedLoosePoints.Add(spawnPoint);
-                continue;
-            }
-
-            spawnPointArray.Add(new ProbabilityObject<string, Spawnpoint>(spawnPoint.Template.Id, spawnPoint.Probability ?? 0, spawnPoint));
-        }
-
         List<Spawnpoint> chosenSpawnPoints = [];
 
         foreach (var lootSpawnDecider in lootSpawnpointDeciders)
@@ -185,8 +185,6 @@ public class LotsofLootLocationLootGenerator(
         }
 
         // Iterate over spawnPoints
-        var seasonalEventActive = seasonalEventService.SeasonalEventEnabled();
-        var seasonalItemTplBlacklist = seasonalEventService.GetInactiveSeasonalEventItems();
         foreach (var spawnPoint in chosenSpawnPoints)
         {
             // SpawnPoint is invalid, skip it
@@ -198,15 +196,13 @@ public class LotsofLootLocationLootGenerator(
             }
 
             // Ensure no blacklisted lootable items are in pool
+            // And ensure no seasonal items are in pool if not in-season
             spawnPoint.Template.Items = spawnPoint
-                .Template.Items.Where(item => !itemFilterService.IsLootableItemBlacklisted(item.Template))
+                .Template.Items.Where(item =>
+                    !itemFilterService.IsLootableItemBlacklisted(item.Template)
+                    && (seasonalEventActive || !seasonalItemTplBlacklist.Contains(item.Template))
+                )
                 .ToList();
-
-            // Ensure no seasonal items are in pool if not in-season
-            if (!seasonalEventActive)
-            {
-                spawnPoint.Template.Items = spawnPoint.Template.Items.Where(item => !seasonalItemTplBlacklist.Contains(item.Template));
-            }
 
             // Spawn point has no items after filtering, skip
             if (spawnPoint.Template.Items is null || !spawnPoint.Template.Items.Any())

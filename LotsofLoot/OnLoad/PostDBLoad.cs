@@ -8,14 +8,13 @@ using SPTarkov.Server.Core.Servers;
 
 namespace LotsofLoot.OnLoad;
 
-[Injectable(TypePriority = OnLoadOrder.PostDBModLoader + LotsofLootLoadPriority.LotsofLootPriorityOffset)]
+[Injectable(TypePriority = OnLoadOrder.PostDBModLoader + LotsofLootModMetadata.LotsofLootPriorityOffset)]
 public class PostDBLoad(
     ConfigService configService,
     DatabaseServer databaseServer,
     LocaleCacheService localeCacheService,
     LazyLoadHandlerService lazyLoadHandlerService,
-    IEnumerable<IOnPresetUpdate> onPresetUpdates,
-    LotsOfLootLogger logger
+    IEnumerable<IOnPresetUpdate> onPresetUpdates
 ) : IOnLoad
 {
     public Task OnLoad()
@@ -24,9 +23,7 @@ public class PostDBLoad(
 
         if (databaseTemplates is null || databaseTemplates.Items is null || databaseTemplates.Prices is null)
         {
-            logger.Critical("Database templates are null, aborting!");
-
-            return Task.CompletedTask;
+            throw new InvalidOperationException("Database templates are null?");
         }
 
         localeCacheService.HydrateCache();

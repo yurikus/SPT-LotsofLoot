@@ -6,6 +6,13 @@ namespace LotsofLoot;
 
 public record LotsofLootModMetadata : AbstractModMetadata
 {
+    /// <summary>
+    /// After SVM, hopefully
+    ///
+    /// I have no idea why WTT armory has such a crazy high offset
+    /// </summary>
+    public const int LotsofLootPriorityOffset = -1000;
+
     public override string ModGuid { get; init; } = "wtf.archangel.lotsoflootredux";
     public override string Name { get; init; } = "Lots of Loot Redux";
     public override string Author { get; init; } = "ArchangelWTF";
